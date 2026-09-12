@@ -1,0 +1,10 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+.env
+data/*.csv
+models/*.joblib
+models/*.json
+logs/*.log*
+.pytest_cache/
