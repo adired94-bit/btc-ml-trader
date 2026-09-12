@@ -154,10 +154,11 @@ class DirectionEnsemble:
         proba = np.asarray(model.predict_proba(X))
         if proba.ndim == 1:  # binary models may return P(class 1) only
             proba = np.column_stack([1 - proba, proba])
-        if proba.shape[1] == N_CLASSES and np.array_equal(self.classes_, np.arange(N_CLASSES)):
+        classes = getattr(self, "classes_", np.arange(N_CLASSES))  # artifacts saved before classes_ existed
+        if proba.shape[1] == N_CLASSES and np.array_equal(classes, np.arange(N_CLASSES)):
             return proba
         full = np.zeros((proba.shape[0], N_CLASSES))
-        full[:, self.classes_] = proba
+        full[:, classes] = proba
         return full
 
     def predict_proba(self, X: pd.DataFrame) -> np.ndarray:

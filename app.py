@@ -30,12 +30,13 @@ ACTION_COLORS = {"LONG": "#35C98D", "SHORT": "#E5615E", "WAIT": "#E8A33D"}
 # ----------------------------------------------------------------------
 
 
-def api_get(base: str, path: str, params: dict[str, Any] | None = None, timeout: int = 30) -> dict[str, Any] | None:
+def api_get(base: str, path: str, params: dict[str, Any] | None = None, timeout: int = 30, silent: bool = False) -> dict[str, Any] | None:
     try:
         resp = requests.get(f"{base}{path}", params=params, timeout=timeout)
         if resp.status_code >= 400:
             detail = resp.json().get("detail", resp.text) if resp.headers.get("content-type", "").startswith("application/json") else resp.text
-            st.warning(f"API {path} -> {resp.status_code}: {detail}")
+            if not silent:
+                st.warning(f"API {path} -> {resp.status_code}: {detail}")
             return None
         return resp.json()
     except requests.RequestException as exc:
@@ -121,9 +122,11 @@ with c5:
 # Tabs
 # ----------------------------------------------------------------------
 
-tab_chart, tab_signal, tab_backtest, tab_model = st.tabs(["📈 Chart", "🎯 Signal & risk", "🧪 Backtest", "🧠 Model"])
+VIEWS = ["📈 Chart", "🎯 Signal & risk", "🧪 Backtest", "🧠 Model"]
+# A radio persisted in session_state keeps the selected view across auto-refresh reruns (st.tabs resets).
+view = st.radio("View", VIEWS, horizontal=True, label_visibility="collapsed", key="view")
 
-with tab_chart:
+if view == "📈 Chart":
     ind = api_get(api_base, "/indicators", {"limit": n_candles})
     vp = api_get(api_base, "/indicators/volume-profile", {"lookback": 240, "bins": 30})
     if ind and ind["rows"]:
@@ -176,7 +179,7 @@ with tab_chart:
         fig.update_yaxes(title_text="RSI", range=[0, 100], row=2, col=1)
         fig.update_yaxes(title_text="Vol", row=3, col=1)
         fig.update_yaxes(matches="y", showticklabels=False, row=1, col=2)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
         latest = df.iloc[-1]
         k1, k2, k3, k4, k5, k6 = st.columns(6)
@@ -189,7 +192,7 @@ with tab_chart:
     else:
         st.info("No indicator data available yet.")
 
-with tab_signal:
+if view == "🎯 Signal & risk":
     if signal:
         pred = signal["prediction"]
         left, right = st.columns([1, 1.2])
@@ -205,7 +208,7 @@ with tab_signal:
                 bar.add_trace(go.Bar(x=probs["class"], y=probs[col], name=col))
             bar.add_hline(y=signal["threshold"], line=dict(color="#E8A33D", dash="dash"))
             bar.update_layout(template="plotly_dark", height=320, barmode="group", yaxis=dict(range=[0, 1]), margin=dict(l=10, r=10, t=20, b=10))
-            st.plotly_chart(bar, use_container_width=True)
+            st.plotly_chart(bar, width="stretch")
             st.caption(signal["reason"])
             st.write(
                 f"Expected range over the next {pred['horizon_bars']} bars: "
@@ -234,15 +237,15 @@ with tab_signal:
                 st.info("No trade: the model is not confident enough. Waiting for the next candle.")
             st.subheader("Key indicators")
             ind_row = signal["indicators"]
-            st.dataframe(pd.DataFrame({"indicator": list(ind_row), "value": [round(v, 4) for v in ind_row.values()]}), hide_index=True, use_container_width=True, height=330)
+            st.dataframe(pd.DataFrame({"indicator": list(ind_row), "value": [round(v, 4) for v in ind_row.values()]}), hide_index=True, width="stretch", height=330)
     else:
         st.info("Signal unavailable - train the model first.")
 
-with tab_backtest:
+if view == "🧪 Backtest":
     st.subheader("Walk-forward backtest (out-of-sample)")
-    latest_bt = api_get(api_base, "/backtest/latest", {"mode": "walk_forward"})
+    latest_bt = api_get(api_base, "/backtest/latest", {"mode": "walk_forward"}, silent=True)
     if latest_bt is None:
-        latest_bt = api_get(api_base, "/backtest/latest", {"mode": "holdout"})
+        latest_bt = api_get(api_base, "/backtest/latest", {"mode": "holdout"}, silent=True)
     colA, colB = st.columns([1, 3])
     with colA:
         bt_mode = st.selectbox("Mode", ["holdout", "walk_forward"], index=0)
@@ -285,14 +288,14 @@ with tab_backtest:
             curve["timestamp"] = pd.to_datetime(curve["timestamp"])
             eq = go.Figure(go.Scatter(x=curve["timestamp"], y=curve["equity"], name="Equity", line=dict(color="#35C98D")))
             eq.update_layout(template="plotly_dark", height=320, margin=dict(l=10, r=10, t=20, b=10), yaxis_title="Equity (USDT)")
-            st.plotly_chart(eq, use_container_width=True)
+            st.plotly_chart(eq, width="stretch")
             trades = pd.DataFrame(result["trades"])
             if not trades.empty:
-                st.dataframe(trades.tail(200).iloc[::-1], hide_index=True, use_container_width=True, height=300)
+                st.dataframe(trades.tail(200).iloc[::-1], hide_index=True, width="stretch", height=300)
         else:
             st.info("No backtest yet - run one from the left panel or via `python -m src.backtest.engine`.")
 
-with tab_model:
+if view == "🧠 Model":
     info = api_get(api_base, "/model/info")
     if info:
         meta = info.get("metadata") or {}
@@ -323,7 +326,7 @@ with tab_model:
                 feats = pd.Series(meta["top_features"]).sort_values()
                 fi = go.Figure(go.Bar(x=feats.values, y=feats.index, orientation="h", marker_color="#4EA8DE"))
                 fi.update_layout(template="plotly_dark", height=420, margin=dict(l=10, r=10, t=20, b=10))
-                st.plotly_chart(fi, use_container_width=True)
+                st.plotly_chart(fi, width="stretch")
 
 st.caption(f"API {api_base} · cache age {health.get('market_cache_age_s')}s · exchange {health.get('exchange')} · v{health.get('version')}")
 
