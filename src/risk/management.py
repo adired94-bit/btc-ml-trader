@@ -59,9 +59,8 @@ class RiskManager:
             risk_per_trade_pct if risk_per_trade_pct is not None else settings.risk_per_trade_pct
         )
         self.atr_multiplier = float(atr_multiplier if atr_multiplier is not None else settings.atr_stop_multiplier)
-        self.reward_risk_ratios = sorted(
-            float(r) for r in (reward_risk_ratios or settings.reward_risk_ratios)
-        )
+        ratios = reward_risk_ratios if reward_risk_ratios is not None else settings.reward_risk_ratios
+        self.reward_risk_ratios = sorted(float(r) for r in ratios)
         self.max_leverage = float(max_leverage if max_leverage is not None else settings.max_leverage)
         self._validate()
 

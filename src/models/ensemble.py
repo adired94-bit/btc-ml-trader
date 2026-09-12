@@ -108,21 +108,36 @@ class DirectionEnsemble:
         self.xgb_model = xgb.XGBClassifier(**self.xgb_params)
         self.lgbm_model = lgb.LGBMClassifier(**self.lgbm_params)
         self.feature_names: list[str] = []
+        self.classes_ = np.arange(N_CLASSES)
         self.is_fitted = False
 
     # ------------------------------------------------------------------
-    def fit(self, X: pd.DataFrame, y: pd.Series | np.ndarray) -> "DirectionEnsemble":
+    def fit(
+        self, X: pd.DataFrame, y: pd.Series | np.ndarray, sample_weight: np.ndarray | None = None
+    ) -> "DirectionEnsemble":
+        """Fit both boosters. ``sample_weight`` (optional) is multiplied with class-balancing weights."""
         y_arr = np.asarray(y, dtype=int)
         if X.empty or len(X) != len(y_arr):
             raise ValueError("X and y must be non-empty and aligned")
         if set(np.unique(y_arr)) - {0, 1, 2}:
             raise ValueError("Labels must be encoded as 0 (DOWN), 1 (FLAT), 2 (UP)")
         self.feature_names = list(X.columns)
-        sample_weight = compute_sample_weight("balanced", y_arr) if self.balance_classes else None
+        # Boosters require contiguous labels 0..k-1; remember which of the 3 classes are present.
+        self.classes_ = np.unique(y_arr)
+        if len(self.classes_) < 2:
+            raise ValueError("At least two classes are required to train the ensemble")
+        y_enc = np.searchsorted(self.classes_, y_arr)
+        k = len(self.classes_)
+        self.xgb_model = xgb.XGBClassifier(**{**self.xgb_params, "num_class": k})
+        self.lgbm_model = lgb.LGBMClassifier(**{**self.lgbm_params, "num_class": k})
+        if sample_weight is None:
+            sample_weight = compute_sample_weight("balanced", y_enc) if self.balance_classes else None
+        elif self.balance_classes:
+            sample_weight = np.asarray(sample_weight, dtype=float) * compute_sample_weight("balanced", y_enc)
         logger.info("Fitting XGBoost on %d rows x %d features", len(X), X.shape[1])
-        self.xgb_model.fit(X.to_numpy(dtype=np.float32), y_arr, sample_weight=sample_weight)
+        self.xgb_model.fit(X.to_numpy(dtype=np.float32), y_enc, sample_weight=sample_weight)
         logger.info("Fitting LightGBM on %d rows x %d features", len(X), X.shape[1])
-        self.lgbm_model.fit(X.to_numpy(dtype=np.float32), y_arr, sample_weight=sample_weight)
+        self.lgbm_model.fit(X.to_numpy(dtype=np.float32), y_enc, sample_weight=sample_weight)
         self.is_fitted = True
         return self
 
@@ -136,12 +151,13 @@ class DirectionEnsemble:
 
     def _full_proba(self, model: Any, X: np.ndarray) -> np.ndarray:
         """Return an (n, 3) probability matrix even if a class was absent in training."""
-        proba = model.predict_proba(X)
-        classes = np.asarray(model.classes_, dtype=int)
-        if proba.shape[1] == N_CLASSES and np.array_equal(classes, np.arange(N_CLASSES)):
+        proba = np.asarray(model.predict_proba(X))
+        if proba.ndim == 1:  # binary models may return P(class 1) only
+            proba = np.column_stack([1 - proba, proba])
+        if proba.shape[1] == N_CLASSES and np.array_equal(self.classes_, np.arange(N_CLASSES)):
             return proba
         full = np.zeros((proba.shape[0], N_CLASSES))
-        full[:, classes] = proba
+        full[:, self.classes_] = proba
         return full
 
     def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
