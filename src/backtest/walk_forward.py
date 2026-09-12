@@ -140,6 +140,7 @@ class DayRecord:
     trade_return_pct: float
     trade_exit: str  # STOP / TAKE_PROFIT / CLOSE / NONE
     equity: float
+    momentum_direction: str = "UP"  # naive benchmark: sign of the trailing 30-day return
 
 
 @dataclass
@@ -425,6 +426,7 @@ def run_walk_forward(
                 volume_ratio=float(data.indicators["volume"].iloc[i] / max(data.indicators["volume"].iloc[max(0, i - 24):i].mean(), 1e-9)),
                 regimes=regimes_now + outcome_flags, trade_side=side, trade_pnl=float(pnl), trade_return_pct=float(ret_pct),
                 trade_exit=exit_reason, equity=float(equity),
+                momentum_direction="UP" if close >= float(data.ohlcv["close"].iloc[max(0, i - 720)]) else "DOWN",
             )
         )
 
@@ -464,6 +466,8 @@ def compute_metrics(records: list[DayRecord], cfg: WalkForwardConfig) -> dict[st
         "start": df["day"].iloc[0],
         "end": df["day"].iloc[-1],
         "directional_accuracy": float(df["hit"].mean()),
+        "momentum_30d_accuracy": float((df["momentum_direction"] == df["actual_direction"]).mean()),
+        "always_up_accuracy": float((df["actual_direction"] == "UP").mean()),
         "traded_days": int(len(traded)),
         "coverage": float(len(traded) / len(df)),
         "traded_directional_accuracy": float(traded["hit"].mean()) if len(traded) else 0.0,
@@ -618,6 +622,7 @@ def format_report(result: WalkForwardResult) -> str:
         f"=== Walk-forward daily evaluation [{c.label}] {settings.symbol} ===",
         f"Window              : {m['start'][:10]} -> {m['end'][:10]} ({m['days']} days, {result.retrains} retrains, {result.runtime_seconds:.0f}s)",
         f"Directional accuracy: {m['directional_accuracy']:.1%} (all days) | {m['traded_directional_accuracy']:.1%} on {m['traded_days']} traded days ({m['coverage']:.0%} coverage)",
+        f"Naive benchmarks     : 30-day momentum {m['momentum_30d_accuracy']:.1%} | always UP {m['always_up_accuracy']:.1%}",
         f"Target price error  : MAE {m['mae_pct']:.2f}% ({m['mae_usd']:,.0f} USD) | RMSE {m['rmse_pct']:.2f}% ({m['rmse_usd']:,.0f} USD) | naive MAE {m['naive_mae_pct']:.2f}%",
         f"Simulated P&L       : {m['total_pnl']:+,.0f} USDT ({m['total_return_pct']:+.2f}%) | buy&hold {m['buy_and_hold_return_pct']:+.2f}%",
         f"Trades              : win rate {m['win_rate']:.1%}, profit factor {m['profit_factor']:.2f}, Sharpe {m['sharpe_ratio']:.2f}, max DD {m['max_drawdown_pct']:.2f}%, exits {m['exit_reasons']}",

@@ -34,6 +34,7 @@ REG_STRONG = {
     "lgbm_params": {**WF.WF_LGBM_PARAMS, "num_leaves": 7, "min_child_samples": 100, "learning_rate": 0.03, "reg_lambda": 10.0},
 }
 REGIME_W = {"trend_up": 1.5, "high_volatility": 1.5}
+LONG_SUBSET = ("baseline", "base+regime_w", "ext+ens", "ext+ens+regime_w", "ext+ens_strongreg", "base+logreg", "ext+ens_h72")
 
 
 def experiments(quick: bool) -> list[WF.WalkForwardConfig]:
@@ -74,6 +75,7 @@ def run(ohlcv, cfg: WF.WalkForwardConfig, cache: dict) -> WF.WalkForwardResult:
 def row(label: str, half: str, m: dict) -> dict:
     return {
         "label": label, "half": half, "days": m["days"], "hit": round(m["directional_accuracy"], 4),
+        "momentum_hit": round(m["momentum_30d_accuracy"], 4), "always_up": round(m["always_up_accuracy"], 4),
         "traded_hit": round(m["traded_directional_accuracy"], 4), "trades": m["traded_days"],
         "mae_pct": round(m["mae_pct"], 3), "naive_mae_pct": round(m["naive_mae_pct"], 3),
         "return_pct": round(m["total_return_pct"], 2), "sharpe": round(m["sharpe_ratio"], 2),
@@ -82,9 +84,9 @@ def row(label: str, half: str, m: dict) -> dict:
 
 
 def md_table(rows: list[dict]) -> str:
-    head = "| Config | Half | Days | Hit rate | Traded hit | Trades | MAE | Naive MAE | Return | Sharpe | Max DD |\n|---|---|---|---|---|---|---|---|---|---|---|"
+    head = "| Config | Half | Days | Hit rate | Momentum 30d | Always UP | Traded hit | Trades | MAE | Naive MAE | Return | Sharpe | Max DD |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|"
     body = [
-        f"| {r['label']} | {r['half']} | {r['days']} | {r['hit']:.1%} | {r['traded_hit']:.1%} | {r['trades']} | {r['mae_pct']:.2f}% | {r['naive_mae_pct']:.2f}% | {r['return_pct']:+.2f}% | {r['sharpe']:.2f} | {r['max_dd']:.2f}% |"
+        f"| {r['label']} | {r['half']} | {r['days']} | {r['hit']:.1%} | {r['momentum_hit']:.1%} | {r['always_up']:.1%} | {r['traded_hit']:.1%} | {r['trades']} | {r['mae_pct']:.2f}% | {r['naive_mae_pct']:.2f}% | {r['return_pct']:+.2f}% | {r['sharpe']:.2f} | {r['max_dd']:.2f}% |"
         for r in rows
     ]
     return "\n".join([head, *body])
@@ -94,11 +96,21 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--quick", action="store_true")
     parser.add_argument("--top", type=int, default=3, help="configs promoted to the validation half")
+    parser.add_argument("--long", action="store_true", help="use the 6-year research cache and a ~3-year evaluation window")
     args = parser.parse_args()
     t0 = time.perf_counter()
 
-    ohlcv = storage.get_ohlcv()
-    exps = experiments(args.quick)
+    if args.long:
+        from scripts.fetch_long_history import LONG_CACHE
+
+        ohlcv = storage.load_cached(LONG_CACHE)
+        if ohlcv is None:
+            raise SystemExit("Run scripts/fetch_long_history.py first")
+        window = {"eval_start_days_ago": 1_100, "eval_end_days_ago": 90, "retrain_every_days": 14}
+        exps = [e.copy(**window) for e in experiments(args.quick) if e.label in LONG_SUBSET]
+    else:
+        ohlcv = storage.get_ohlcv()
+        exps = experiments(args.quick)
     base = exps[0]
     span = base.eval_start_days_ago - base.eval_end_days_ago
     mid = base.eval_end_days_ago + span // 2
@@ -113,7 +125,7 @@ def main() -> None:
             continue
         r = row(cfg.label, "tune", res.metrics)
         tune_rows.append(r)
-        print(f"[tune] {cfg.label:<22} hit {r['hit']:.1%} traded {r['traded_hit']:.1%} ({r['trades']}) MAE {r['mae_pct']:.2f}% ret {r['return_pct']:+.2f}% sharpe {r['sharpe']:.2f}", flush=True)
+        print(f"[tune] {cfg.label:<22} hit {r['hit']:.1%} (mom {r['momentum_hit']:.1%}) traded {r['traded_hit']:.1%} ({r['trades']}) MAE {r['mae_pct']:.2f}% ret {r['return_pct']:+.2f}% sharpe {r['sharpe']:.2f}", flush=True)
 
     ranked = sorted(tune_rows, key=lambda r: r["score"], reverse=True)
     promoted = [r["label"] for r in ranked[: args.top]]
@@ -137,7 +149,7 @@ def main() -> None:
 
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     entry = [
-        f"\n## {now} — Improvement campaign: {len(tune_rows)} experiments on the daily forecast\n",
+        f"\n## {now} — Improvement campaign{' (6-year history, ~3-year window)' if args.long else ''}: {len(tune_rows)} experiments on the daily forecast\n",
         "Each experiment scored on the tuning half (older), the top configs re-scored on the validation half (newer), winner re-run over the full window. Score = hit + 0.5 × traded hit + 0.0005 × return%.\n",
         "### Tuning half\n", md_table(ranked), "\n### Validation half (never used for selection)\n", md_table(val_rows),
         f"\n### Winner: `{winner}` — full window\n", md_table([full_row]),
@@ -153,7 +165,7 @@ def main() -> None:
     entry.append(f"* Campaign runtime {time.perf_counter() - t0:.0f}s.\n")
     text = "\n".join(entry)
     WF.append_learnings(text)
-    out = settings.models_dir / "improvement_campaign.json"
+    out = settings.models_dir / ("improvement_campaign_long.json" if args.long else "improvement_campaign.json")
     out.write_text(json.dumps({"tune": ranked, "validation": val_rows, "full": full_row, "winner": by_label[winner].to_dict()}, indent=2), encoding="utf-8")
     print("\n" + text)
     print(f"saved {out}")

@@ -187,3 +187,49 @@ booster-agreement filter). Window 2025-05-30 → 2026-09-12, 11,273 bars.
    of the signal.
 3. Probability calibration (isotonic on a rolling OOS window) before thresholding.
 4. Keep `regime_weights={'trend_up': 1.5, 'high_volatility': 1.5}` (adopted for the daily model).
+
+## 2026-09-12 21:23 UTC — Improvement campaign: 14 experiments on the daily forecast
+
+Each experiment scored on the tuning half (older), the top configs re-scored on the validation half (newer), winner re-run over the full window. Score = hit + 0.5 × traded hit + 0.0005 × return%.
+
+### Tuning half
+
+| Config | Half | Days | Hit rate | Traded hit | Trades | MAE | Naive MAE | Return | Sharpe | Max DD |
+|---|---|---|---|---|---|---|---|---|---|---|
+| ext+ens+retrain1d | tune | 139 | 55.4% | 59.1% | 105 | 1.66% | 1.53% | -1.05% | -0.39 | 6.93% |
+| ext+ens | tune | 139 | 51.8% | 56.3% | 119 | 1.78% | 1.53% | -7.04% | -2.49 | 11.52% |
+| ext+ens+regime_w | tune | 139 | 51.8% | 55.8% | 104 | 1.82% | 1.53% | -4.44% | -1.69 | 9.22% |
+| ext+ens_strongreg | tune | 139 | 53.2% | 51.1% | 88 | 1.78% | 1.53% | -6.63% | -2.87 | 8.91% |
+| base+regime_w | tune | 139 | 51.1% | 48.5% | 103 | 1.69% | 1.53% | -2.39% | -0.87 | 6.84% |
+| ext+ens_h72 | tune | 139 | 48.2% | 49.6% | 115 | 3.54% | 2.99% | -7.84% | -1.56 | 21.15% |
+| base+logreg | tune | 139 | 48.9% | 47.1% | 70 | 1.75% | 1.53% | -0.37% | -0.18 | 3.43% |
+| baseline | tune | 139 | 46.8% | 49.0% | 102 | 1.75% | 1.53% | -3.69% | -1.38 | 6.62% |
+| ext+logreg_c0.05 | tune | 139 | 43.9% | 42.3% | 104 | 1.78% | 1.53% | -13.00% | -5.76 | 14.10% |
+| ext+ens_h168 | tune | 139 | 44.6% | 41.3% | 121 | 6.55% | 4.79% | -19.03% | -3.17 | 25.55% |
+| ext+logreg_c0.5 | tune | 139 | 43.9% | 41.9% | 105 | 1.78% | 1.53% | -12.50% | -5.53 | 13.63% |
+| ext+logreg_c0.01 | tune | 139 | 41.7% | 45.4% | 97 | 1.78% | 1.53% | -9.88% | -4.55 | 11.42% |
+| ext+logreg_h72 | tune | 139 | 41.7% | 38.6% | 114 | 3.54% | 2.99% | -20.95% | -5.16 | 25.98% |
+| ext+logreg_h168 | tune | 139 | 36.0% | 34.8% | 115 | 6.55% | 4.79% | -32.16% | -5.93 | 36.79% |
+
+### Validation half (never used for selection)
+
+| Config | Half | Days | Hit rate | Traded hit | Trades | MAE | Naive MAE | Return | Sharpe | Max DD |
+|---|---|---|---|---|---|---|---|---|---|---|
+| ext+ens+retrain1d | validation | 138 | 44.9% | 49.5% | 101 | 2.02% | 1.92% | -3.72% | -1.48 | 4.44% |
+| ext+ens | validation | 138 | 49.3% | 47.1% | 102 | 2.05% | 1.92% | -6.63% | -2.52 | 6.70% |
+| ext+ens+regime_w | validation | 138 | 49.3% | 46.9% | 98 | 2.05% | 1.92% | -5.67% | -2.11 | 7.20% |
+| baseline | validation | 138 | 42.0% | 41.0% | 100 | 2.02% | 1.92% | -5.75% | -2.17 | 8.06% |
+
+### Winner: `ext+ens` — full window
+
+| Config | Half | Days | Hit rate | Traded hit | Trades | MAE | Naive MAE | Return | Sharpe | Max DD |
+|---|---|---|---|---|---|---|---|---|---|---|
+| ext+ens | full | 276 | 50.4% | 53.4% | 221 | 1.91% | 1.71% | -10.92% | -2.07 | 11.83% |
+
+**Learnings.**
+
+* Best on the tuning half: `ext+ens+retrain1d` (55.4% hit rate); on validation it scored 44.9%.
+* Baseline validation hit rate 42.0% vs winner 49.3%; adopted.
+* 7-day horizon reaches 44.6% on tuning but its days overlap heavily (7× fewer independent samples) — treat with caution.
+* Full-window winner hit rate 50.4%, MAE 1.91% vs naive 1.71%.
+* Campaign runtime 1078s.
