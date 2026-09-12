@@ -47,10 +47,13 @@ from typing import Any
 import lightgbm as lgb
 import numpy as np
 import pandas as pd
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 
 from config import PROJECT_ROOT, settings
 from src.data import storage
-from src.data.processor import DOWN, UP, add_all_indicators, build_features
+from src.data.processor import DOWN, UP, add_all_indicators, build_extended_features, build_features
 from src.logging_config import get_logger
 from src.models.ensemble import DirectionEnsemble
 from src.risk.management import RiskManager
@@ -95,6 +98,9 @@ class WalkForwardConfig:
     reg_params: dict[str, Any] = field(default_factory=lambda: dict(WF_REG_PARAMS))
     regime_weights: dict[str, float] = field(default_factory=dict)  # extra sample weight per regime flag
     skip_regimes: list[str] = field(default_factory=list)  # ex-ante regimes in which no trade is taken
+    feature_set: str = "base"  # "base" (36 features) or "extended" (+ multi-day context)
+    model: str = "ensemble"  # "ensemble" (XGB+LGBM) or "logreg" (regularised logistic regression)
+    logreg_c: float = 0.05
     label: str = "baseline"
 
     def copy(self, **changes: Any) -> "WalkForwardConfig":
@@ -207,9 +213,9 @@ def risk_level_from_rank(rank: float) -> str:
     return "MEDIUM"
 
 
-def prepare_data(ohlcv: pd.DataFrame, horizon_bars: int = BARS_PER_DAY) -> PreparedData:
+def prepare_data(ohlcv: pd.DataFrame, horizon_bars: int = BARS_PER_DAY, feature_set: str = "base") -> PreparedData:
     indicators = add_all_indicators(ohlcv)
-    features = build_features(ohlcv, indicators)
+    features = build_extended_features(ohlcv, indicators) if feature_set == "extended" else build_features(ohlcv, indicators)
     close = ohlcv["close"]
     future_return = close.shift(-horizon_bars) / close - 1.0
     direction = pd.Series(np.where(future_return >= 0, UP, DOWN), index=ohlcv.index)
@@ -240,7 +246,15 @@ class DailyModels:
 
     def __init__(self, cfg: WalkForwardConfig) -> None:
         self.cfg = cfg
-        self.direction = DirectionEnsemble(xgb_params=cfg.xgb_params, lgbm_params=cfg.lgbm_params)
+        if cfg.model == "logreg":
+            self.direction = make_pipeline(
+                StandardScaler(), LogisticRegression(C=cfg.logreg_c, max_iter=2_000, class_weight="balanced")
+            )
+        elif cfg.model == "ensemble":
+            self.direction = DirectionEnsemble(xgb_params=cfg.xgb_params, lgbm_params=cfg.lgbm_params)
+        else:
+            raise ValueError(f"Unknown model: {cfg.model}")
+        self.feature_names: list[str] = []
         self.regressor = lgb.LGBMRegressor(**cfg.reg_params)
         self.train_end: pd.Timestamp | None = None
         self.n_rows = 0
@@ -256,16 +270,28 @@ class DailyModels:
         for flag, extra in self.cfg.regime_weights.items():
             if flag in data.regimes.columns and extra > 0:
                 weights = weights * np.where(data.regimes.loc[X.index, flag].to_numpy(), 1.0 + extra, 1.0)
-        self.direction.fit(X, y_dir, sample_weight=weights)
+        self.feature_names = list(X.columns)
+        if self.cfg.model == "logreg":
+            self.direction.fit(X.to_numpy(dtype=np.float32), y_dir.to_numpy(), logisticregression__sample_weight=weights)
+        else:
+            self.direction.fit(X, y_dir, sample_weight=weights)
         self.regressor.fit(X.to_numpy(dtype=np.float32), y_ret.to_numpy(dtype=np.float32), sample_weight=weights)
         self.train_end = train_end
         self.n_rows = len(X)
         return self
 
     def predict(self, features_row: pd.DataFrame) -> tuple[float, float, float]:
-        proba = self.direction.predict_proba(features_row)[0]
-        ret = float(self.regressor.predict(features_row[self.direction.feature_names].to_numpy(dtype=np.float32))[0])
-        return float(proba[UP]), float(proba[DOWN]), ret
+        arr = features_row[self.feature_names].to_numpy(dtype=np.float32)
+        if self.cfg.model == "logreg":
+            proba = self.direction.predict_proba(arr)[0]
+            classes = list(self.direction.classes_)
+            p_up = float(proba[classes.index(UP)]) if UP in classes else 0.0
+            p_down = float(proba[classes.index(DOWN)]) if DOWN in classes else 0.0
+        else:
+            proba = self.direction.predict_proba(features_row)[0]
+            p_up, p_down = float(proba[UP]), float(proba[DOWN])
+        ret = float(self.regressor.predict(arr)[0])
+        return p_up, p_down, ret
 
 
 # ----------------------------------------------------------------------
@@ -328,7 +354,7 @@ def run_walk_forward(
 ) -> WalkForwardResult:
     cfg = cfg or WalkForwardConfig()
     t0 = time.perf_counter()
-    data = data or prepare_data(ohlcv, cfg.horizon_bars)
+    data = data or prepare_data(ohlcv, cfg.horizon_bars, cfg.feature_set)
     idx = ohlcv.index
     start, end = evaluation_days(idx, cfg)
     closes = day_close_bars(idx)
@@ -389,7 +415,7 @@ def run_walk_forward(
 
         records.append(
             DayRecord(
-                day=day.isoformat(), target_day=(day + pd.Timedelta(days=1)).isoformat(), train_end=train_end.isoformat(),
+                day=day.isoformat(), target_day=(day + pd.Timedelta(hours=cfg.horizon_bars)).isoformat(), train_end=train_end.isoformat(),
                 close=close, actual_close=actual_close, actual_return_pct=float(actual_ret),
                 predicted_direction=pred_dir, actual_direction=actual_dir, hit=pred_dir == actual_dir,
                 prob_up=p_up, prob_down=p_down, confidence=float(confidence), traded=traded,
@@ -552,7 +578,7 @@ def self_improve(
     ohlcv: pd.DataFrame, base: WalkForwardConfig, data: PreparedData | None = None, candidates: list[WalkForwardConfig] | None = None, verbose: bool = True
 ) -> FeedbackResult:
     """Tune on the first half of the window, validate on the second half."""
-    data = data or prepare_data(ohlcv, base.horizon_bars)
+    data = data or prepare_data(ohlcv, base.horizon_bars, base.feature_set)
     span = base.eval_start_days_ago - base.eval_end_days_ago
     mid = base.eval_end_days_ago + span // 2
     tune_cfg = base.copy(eval_end_days_ago=mid)
@@ -689,7 +715,7 @@ def main() -> None:
         cfg.reg_params = {**cfg.reg_params, "n_estimators": 80}
 
     ohlcv = storage.get_ohlcv()
-    data = prepare_data(ohlcv, cfg.horizon_bars)
+    data = prepare_data(ohlcv, cfg.horizon_bars, cfg.feature_set)
     baseline = run_walk_forward(ohlcv, cfg, data)
     print("\n" + format_report(baseline))
 

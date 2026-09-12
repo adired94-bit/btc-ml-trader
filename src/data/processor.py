@@ -284,6 +284,37 @@ def build_features(df: pd.DataFrame, indicators: pd.DataFrame | None = None) -> 
     return feats.replace([np.inf, -np.inf], np.nan)
 
 
+def build_extended_features(df: pd.DataFrame, indicators: pd.DataFrame | None = None) -> pd.DataFrame:
+    """Base features plus multi-day context (all causal). Used by the daily-horizon experiments."""
+    ind = indicators if indicators is not None else add_all_indicators(df)
+    feats = build_features(df, ind)
+    close = ind["close"]
+    for lag in (48, 72, 168, 336, 720):
+        feats[f"ret_{lag}"] = close.pct_change(lag)
+    log_ret = np.log(close / close.shift(1))
+    feats["volatility_168"] = log_ret.rolling(168).std()
+    feats["volatility_720"] = log_ret.rolling(720).std()
+    feats["vol_ratio_24_168"] = feats["volatility_24"] / feats["volatility_168"].replace(0.0, np.nan)
+    feats["vol_ratio_72_720"] = feats["volatility_72"] / feats["volatility_720"].replace(0.0, np.nan)
+    high_30d = ind["high"].rolling(720, min_periods=240).max()
+    low_30d = ind["low"].rolling(720, min_periods=240).min()
+    feats["dist_high_30d"] = close / high_30d - 1.0
+    feats["dist_low_30d"] = close / low_30d - 1.0
+    feats["range_pos_30d"] = (close - low_30d) / (high_30d - low_30d).replace(0.0, np.nan)
+    high_7d = ind["high"].rolling(168, min_periods=100).max()
+    low_7d = ind["low"].rolling(168, min_periods=100).min()
+    feats["range_pos_7d"] = (close - low_7d) / (high_7d - low_7d).replace(0.0, np.nan)
+    feats["volume_ratio_24_168"] = ind["volume"].rolling(24).mean() / ind["volume"].rolling(168).mean().replace(0.0, np.nan)
+    feats["rsi_daily_proxy"] = rsi(close, 14 * 24) / 100.0
+    feats["ema_200_slope_24"] = ind["ema_200"].pct_change(24)
+    feats["ema_50_slope_24"] = ind["ema_50"].pct_change(24)
+    feats["up_days_7"] = (close.pct_change(24) > 0).astype(float).rolling(7 * 24, min_periods=24).mean()
+    dom = ind.index.day.to_numpy()
+    feats["dom_sin"] = np.sin(2 * np.pi * dom / 31)
+    feats["dom_cos"] = np.cos(2 * np.pi * dom / 31)
+    return feats.replace([np.inf, -np.inf], np.nan)
+
+
 def build_labels(
     df: pd.DataFrame, horizon: int | None = None, threshold: float | None = None
 ) -> pd.DataFrame:
