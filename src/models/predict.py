@@ -21,6 +21,9 @@ from src.risk.management import RiskManager
 logger = get_logger(__name__)
 
 
+INFERENCE_WINDOW_BARS = 2_500
+
+
 class ModelNotTrainedError(RuntimeError):
     """Raised when inference is requested before any model artifact exists."""
 
@@ -119,7 +122,9 @@ class Predictor:
 
     def predict_latest(self, df: pd.DataFrame) -> tuple[Prediction, pd.Series]:
         """Prediction for the last closed candle in ``df`` plus its indicator row."""
-        features, indicators = latest_feature_row(df)
+        # Indicators only need a bounded look-back (EMA-200 warm-up, 240-bar volume profile);
+        # computing them on the full history made every request take ~20 s.
+        features, indicators = latest_feature_row(df.tail(INFERENCE_WINDOW_BARS))
         if features.isna().any(axis=None):
             raise ValueError("Insufficient history to compute every feature (need >= 300 bars)")
         proba = self.predict_proba(features)[0]

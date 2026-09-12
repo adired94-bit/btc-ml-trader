@@ -90,8 +90,9 @@ if health is None:
 # Header: ticker + signal
 # ----------------------------------------------------------------------
 
-ticker = api_get(api_base, "/market/ticker", timeout=15)
-signal = api_get(api_base, "/signal/latest", {"threshold": threshold, "equity": equity, "risk_per_trade_pct": risk_pct, "atr_multiplier": atr_mult})
+with st.spinner("Loading live market data and model signal..."):
+    ticker = api_get(api_base, "/market/ticker", timeout=15)
+    signal = api_get(api_base, "/signal/latest", {"threshold": threshold, "equity": equity, "risk_per_trade_pct": risk_pct, "atr_multiplier": atr_mult}, timeout=90)
 
 st.title(f"{settings.symbol} · {settings.timeframe} · ML trading signals")
 c1, c2, c3, c4, c5 = st.columns([1.3, 1, 1, 1, 1.6])
