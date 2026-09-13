@@ -287,3 +287,58 @@ Each experiment scored on the tuning half (older), the top configs re-scored on 
   open interest (free via CCXT `fetchFundingRateHistory` / `fetchOpenInterestHistory`), stablecoin
   flows, order-book imbalance, cross-asset context (ETH, SPX, DXY). Alternatively change the target
   to next-day range/volatility, which is far more predictable than direction.
+
+## 2026-09-13 06:39 UTC — Improvement campaign (6-year history, ~3-year window, order-flow features): 7 experiments on the daily forecast
+
+Each experiment scored on the tuning half (older), the top configs re-scored on the validation half (newer), winner re-run over the full window. Score = hit + 0.5 × traded hit + 0.0005 × return%.
+
+### Tuning half
+
+| Config | Half | Days | Hit rate | Momentum 30d | Always UP | Traded hit | Trades | MAE | Naive MAE | Return | Sharpe | Max DD |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| flow+logreg | tune | 506 | 54.9% | 50.2% | 53.4% | 56.1% | 280 | 1.85% | 1.88% | -1.51% | -0.14 | 8.73% |
+| base+regime_w | tune | 506 | 53.9% | 50.2% | 53.4% | 54.8% | 279 | 1.87% | 1.88% | -2.93% | -0.30 | 8.28% |
+| flow+ens | tune | 506 | 54.7% | 50.2% | 53.4% | 52.1% | 330 | 1.85% | 1.88% | -13.11% | -1.40 | 15.56% |
+| flow+ens+retrain7d | tune | 506 | 54.7% | 50.2% | 53.4% | 52.1% | 330 | 1.85% | 1.88% | -13.11% | -1.40 | 15.56% |
+| baseline | tune | 506 | 53.2% | 50.2% | 53.4% | 53.7% | 296 | 1.86% | 1.88% | -6.03% | -0.64 | 9.15% |
+| flow+ens_strongreg | tune | 506 | 53.9% | 50.2% | 53.4% | 51.3% | 222 | 1.85% | 1.88% | -14.99% | -1.99 | 15.99% |
+| flow+ens+regime_w | tune | 506 | 51.8% | 50.2% | 53.4% | 53.6% | 323 | 1.88% | 1.88% | -18.12% | -1.98 | 20.81% |
+
+### Validation half (never used for selection)
+
+| Config | Half | Days | Hit rate | Momentum 30d | Always UP | Traded hit | Trades | MAE | Naive MAE | Return | Sharpe | Max DD |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| flow+logreg | validation | 506 | 50.4% | 51.6% | 48.6% | 51.7% | 236 | 1.68% | 1.63% | -4.54% | -0.57 | 13.88% |
+| base+regime_w | validation | 506 | 50.0% | 51.6% | 48.6% | 54.1% | 194 | 1.67% | 1.63% | -2.78% | -0.40 | 5.66% |
+| baseline | validation | 506 | 49.8% | 51.6% | 48.6% | 50.6% | 239 | 1.68% | 1.63% | -5.00% | -0.69 | 7.05% |
+
+### Winner: `base+regime_w` — full window
+
+| Config | Half | Days | Hit rate | Momentum 30d | Always UP | Traded hit | Trades | MAE | Naive MAE | Return | Sharpe | Max DD |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| base+regime_w | full | 1011 | 51.8% | 50.9% | 51.0% | 54.4% | 467 | 1.77% | 1.75% | -7.80% | -0.50 | 13.21% |
+
+**Learnings.**
+
+* Best on the tuning half: `flow+logreg` (54.9% hit rate); on validation it scored 50.4%.
+* Baseline validation hit rate 49.8% vs winner 50.0%; adopted.
+* Full-window winner hit rate 51.8%, MAE 1.77% vs naive 1.75%.
+* Campaign runtime 1584s.
+
+## 2026-09-13 — Conclusion after the order-flow campaign (3 campaigns, 27 experiments total)
+
+* New information (taker-buy ratio, trade count, perp basis, premium index, funding rate; 6 years)
+  did **not** add generalisable signal: `flow+logreg` scored 54.9 % / 56.1 % traded on the tuning
+  half and fell to 50.4 % / 51.7 % on validation. Ensemble variants with flow features were worse
+  than the price-only baseline on validation.
+* The only configuration that survived every validation split is **`base+regime_w`**
+  (36 price/volume features, XGB+LGBM, regime weights trend_up/high_volatility × 1.5):
+  full 1,011-day window hit rate 51.8 %, **54.4 % on 467 traded days**, P&L -7.8 % after costs.
+  Momentum benchmark on the same days: 50.9 %.
+* Honest ceiling with everything tried so far: ~52 % all days / ~54 % on confident days.
+  Trading it is still net negative after 0.06 % round-trip costs.
+* Still untested and worth trying next: (1) changing the target to next-day range/volatility
+  (a breakout strategy needs a good volatility forecast, not a direction forecast);
+  (2) cross-asset context (ETH/BTC relative strength, SPX/DXY daily);
+  (3) meta-labeling: a second model that predicts *when* the first one is right, and trading only then;
+  (4) on-chain / stablecoin flow data (paid sources).

@@ -115,7 +115,14 @@ def main() -> None:
             raise SystemExit("Run scripts/fetch_long_history.py first")
         window = {"eval_start_days_ago": 1_100, "eval_end_days_ago": 90, "retrain_every_days": 21 if args.flow else 14}
         subset = FLOW_SUBSET if args.flow else LONG_SUBSET
-        exps = [e.copy(**window) for e in experiments(args.quick) if e.label in subset]
+        exps = []
+        for e in experiments(args.quick):
+            if e.label not in subset:
+                continue
+            overrides = dict(window)
+            if "retrain" in e.label:  # experiments that *are* about retrain cadence keep their own value
+                overrides.pop("retrain_every_days")
+            exps.append(e.copy(**overrides))
     else:
         ohlcv = storage.get_ohlcv()
         exps = experiments(args.quick)
