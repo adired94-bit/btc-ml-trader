@@ -200,7 +200,9 @@ class DirectionEnsemble:
     @classmethod
     def load(cls, path: Path) -> "DirectionEnsemble":
         obj = joblib.load(Path(path))
-        if not isinstance(obj, cls):
+        # Compare by class name: Streamlit hot-reloads modules, so the class object identity
+        # can differ between the unpickled instance and ``cls`` even for the same class.
+        if type(obj).__name__ != cls.__name__:
             raise TypeError(f"{path} does not contain a DirectionEnsemble")
         return obj
 
@@ -258,6 +260,6 @@ class RangeRegressor:
     @classmethod
     def load(cls, path: Path) -> "RangeRegressor":
         obj = joblib.load(Path(path))
-        if not isinstance(obj, cls):
+        if type(obj).__name__ != cls.__name__:
             raise TypeError(f"{path} does not contain a RangeRegressor")
         return obj
