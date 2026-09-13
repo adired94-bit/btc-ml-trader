@@ -225,6 +225,10 @@ def prepare_data(
         if alt is None:
             raise ValueError("feature_set='flow' needs data/*_alt.csv - run `python -m src.data.altdata` first")
         features = build_flow_features(ohlcv, indicators, alt)
+    elif feature_set == "patterns":
+        from src.data.patterns import build_pattern_features
+
+        features = build_pattern_features(ohlcv, indicators)
     elif feature_set == "extended":
         features = build_extended_features(ohlcv, indicators)
     elif feature_set == "base":
