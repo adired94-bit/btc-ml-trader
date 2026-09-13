@@ -4,7 +4,9 @@ __pycache__/
 *.pyc
 .env
 data/*.csv
-models/*.joblib
+!data/BTC_USDT_1h.csv
 models/*.json
+!models/metadata.json
 logs/*.log*
 .pytest_cache/
+logs/*.err

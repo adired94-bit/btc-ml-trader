@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: btc-ml-trader
+    runtime: docker
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /_stcore/health
+    envVars:
+      - key: EXCHANGE_ID
+        value: binance
+      - key: LOG_LEVEL
+        value: INFO
