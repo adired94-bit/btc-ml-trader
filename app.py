@@ -203,17 +203,18 @@ if view == "🧭 Swing":
             for r in reg["reasons"]:
                 st.markdown(f"• {r}")
             ch = snap["changes_pct"]
-            m1, m2, m3, m4 = st.columns(4)
+            m1, m2 = st.columns(2)
             m1.metric("שבוע", f"{ch['1w']:+.1f}%")
             m2.metric("חודש", f"{ch['1m']:+.1f}%")
+            m3, m4 = st.columns(2)
             m3.metric("3 חודשים", f"{ch['3m']:+.1f}%")
             m4.metric("שנה", f"{ch['1y']:+.1f}%")
             risk = snap["risk"]
             st.markdown("**סיכון (מהתנודתיות של 21 הימים האחרונים)**")
-            r1, r2, r3 = st.columns(3)
+            r1, r2 = st.columns(2)
             r1.metric("תזוזה צפויה לשבוע (±1σ)", f"±{risk['expected_move_1w_pct']:.1f}%")
             r2.metric("תזוזה צפויה לחודש (±1σ)", f"±{risk['expected_move_1m_pct']:.1f}%")
-            r3.metric("תנודתיות שנתית", f"{risk['vol_21d_annualised_pct']:.0f}%", f"אחוזון {risk['vol_percentile_1y']:.0f} בשנה")
+            st.metric("תנודתיות שנתית", f"{risk['vol_21d_annualised_pct']:.0f}%", f"אחוזון {risk['vol_percentile_1y']:.0f} בשנה האחרונה")
             st.caption(f"טווח סביר לחודש: {risk['range_1m'][0]:,.0f} – {risk['range_1m'][1]:,.0f} · במקרה קיצון (2σ): {risk['range_1m_2sigma'][0]:,.0f} – {risk['range_1m_2sigma'][1]:,.0f} · ירידה מהשיא: {risk['drawdown_from_ath_pct']:.1f}% · הנפילה הגדולה בשנה: {risk['max_drawdown_1y_pct']:.1f}%"
                        + (f" · בטא לביטקוין {risk['beta_to_btc_63d']:.2f}" if "beta_to_btc_63d" in risk else ""))
             two_sigma = 2 * risk["expected_move_1m_pct"]
