@@ -101,9 +101,16 @@ def api_post(base: str, path: str, payload: dict[str, Any], timeout: int = 30) -
 
 with st.sidebar:
     st.title("₿ Control panel")
+    # A widget-keyed session_state entry may only be written before the widget is instantiated,
+    # so an unreachable URL is swapped for "embedded" here, on the rerun requested further down.
+    unreachable = st.session_state.pop("api_base_unreachable", None)
+    if unreachable:
+        st.session_state["api_base"] = "embedded"
     if "api_base" not in st.session_state:
         st.session_state["api_base"] = settings.api_url if _http_alive(settings.api_url) else "embedded"
     api_base = st.text_input("API URL (or 'embedded')", key="api_base").rstrip("/")
+    if unreachable:
+        st.warning(f"API at {unreachable} is unreachable - switched to in-process mode.")
     if api_base == "embedded":
         st.caption("Running in-process: no separate API server needed.")
     st.subheader("Signal")
@@ -122,9 +129,8 @@ with st.sidebar:
 
 health = api_get(api_base, "/health", timeout=10, silent=True)
 if health is None and api_base != "embedded":
-    st.session_state["api_base"] = "embedded"
-    api_base = "embedded"
-    health = api_get(api_base, "/health", timeout=10)
+    st.session_state["api_base_unreachable"] = api_base
+    st.rerun()
 if health is None:
     st.error("Neither the API server nor the in-process engine could start. Check the logs.")
     st.stop()
