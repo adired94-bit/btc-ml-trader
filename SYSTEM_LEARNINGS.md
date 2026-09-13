@@ -21,7 +21,8 @@ Conventions:
 |---|---|---|---|
 | Holdout 4h-horizon strategy (last 20 % of data) | Sharpe / max DD | -1.27 / 10.76 % | 2026-09-12 baseline |
 | Rolling walk-forward 4h-horizon strategy (12 folds, 470 trades) | Sharpe / max DD | -1.66 / 49.73 % | 2026-09-12 baseline |
-| Daily walk-forward (276 days) | Traded directional accuracy | 50.5 % (baseline 47.7 %) | 2026-09-12 regime upweighting |
+| Daily walk-forward (276 days, 2-year data) | Traded directional accuracy | 53.4 % (hit rate 50.4 %) | 2026-09-13 extended features |
+| Daily walk-forward (1,011 days, 6-year data) | Hit rate / traded | 52.8 % / 53.6 % (momentum benchmark 50.9 %) | 2026-09-13 regime upweighting |
 | Daily walk-forward (276 days) | Target-price MAE | 1.85 % (naive 1.71 %) | 2026-09-12 |
 | Daily walk-forward (276 days) | Simulated P&L | -0.94 % (baseline -4.70 %, buy & hold -42.8 %) | 2026-09-12 regime upweighting |
 
@@ -233,3 +234,56 @@ Each experiment scored on the tuning half (older), the top configs re-scored on 
 * 7-day horizon reaches 44.6% on tuning but its days overlap heavily (7× fewer independent samples) — treat with caution.
 * Full-window winner hit rate 50.4%, MAE 1.91% vs naive 1.71%.
 * Campaign runtime 1078s.
+
+## 2026-09-13 06:07 UTC — Improvement campaign (6-year history, ~3-year window): 7 experiments on the daily forecast
+
+Each experiment scored on the tuning half (older), the top configs re-scored on the validation half (newer), winner re-run over the full window. Score = hit + 0.5 × traded hit + 0.0005 × return%.
+
+### Tuning half
+
+| Config | Half | Days | Hit rate | Momentum 30d | Always UP | Traded hit | Trades | MAE | Naive MAE | Return | Sharpe | Max DD |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| base+logreg | tune | 506 | 53.4% | 50.2% | 53.4% | 62.4% | 133 | 1.86% | 1.88% | -3.56% | -0.56 | 6.17% |
+| base+regime_w | tune | 506 | 54.7% | 50.2% | 53.4% | 53.4% | 275 | 1.87% | 1.88% | -6.26% | -0.69 | 9.89% |
+| ext+ens_strongreg | tune | 506 | 52.8% | 50.2% | 53.4% | 55.2% | 239 | 1.87% | 1.88% | -7.31% | -0.84 | 9.91% |
+| baseline | tune | 506 | 52.8% | 50.2% | 53.4% | 54.9% | 288 | 1.86% | 1.88% | -5.08% | -0.55 | 10.32% |
+| ext+ens+regime_w | tune | 506 | 50.6% | 50.2% | 53.4% | 53.0% | 315 | 1.87% | 1.88% | -13.89% | -1.57 | 15.41% |
+| ext+ens | tune | 506 | 51.2% | 50.2% | 53.4% | 51.3% | 335 | 1.87% | 1.88% | -18.45% | -2.10 | 19.64% |
+| ext+ens_h72 | tune | 506 | 48.2% | 50.2% | 57.3% | 49.8% | 396 | 3.43% | 3.43% | +3.32% | 0.25 | 19.33% |
+
+### Validation half (never used for selection)
+
+| Config | Half | Days | Hit rate | Momentum 30d | Always UP | Traded hit | Trades | MAE | Naive MAE | Return | Sharpe | Max DD |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| base+logreg | validation | 506 | 49.0% | 51.6% | 48.6% | 49.0% | 96 | 1.68% | 1.63% | -1.81% | -0.37 | 3.42% |
+| base+regime_w | validation | 506 | 51.2% | 51.6% | 48.6% | 53.6% | 192 | 1.67% | 1.63% | -2.71% | -0.39 | 6.68% |
+| ext+ens_strongreg | validation | 506 | 47.6% | 51.6% | 48.6% | 53.5% | 170 | 1.70% | 1.63% | -6.99% | -1.03 | 8.73% |
+| baseline | validation | 506 | 49.0% | 51.6% | 48.6% | 50.8% | 244 | 1.68% | 1.63% | -1.95% | -0.25 | 5.65% |
+
+### Winner: `base+regime_w` — full window
+
+| Config | Half | Days | Hit rate | Momentum 30d | Always UP | Traded hit | Trades | MAE | Naive MAE | Return | Sharpe | Max DD |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| base+regime_w | full | 1011 | 52.8% | 50.9% | 51.0% | 53.6% | 461 | 1.77% | 1.75% | -10.95% | -0.72 | 14.87% |
+
+**Learnings.**
+
+* Best on the tuning half: `base+logreg` (53.4% hit rate); on validation it scored 49.0%.
+* Baseline validation hit rate 49.0% vs winner 51.2%; adopted.
+* Full-window winner hit rate 52.8%, MAE 1.77% vs naive 1.75%.
+* Campaign runtime 31255s.
+
+## 2026-09-13 — Conclusion after two campaigns (21 experiments, ~9 h of compute)
+
+* With price/volume features only, the honest out-of-sample ceiling is **52–54 % daily hit rate**
+  (momentum benchmark 51 %). Every configuration that looked better on the tuning half
+  (55–62 %) fell back to 45–49 % on the validation half — noise, not signal.
+* Neither extended features, logistic regression, daily retraining nor longer horizons generalised.
+  Regime up-weighting (`trend_up`, `high_volatility` × 1.5) is the only change that survived both
+  campaigns and it is worth about +2 pp.
+* Simulated P&L stays negative after 0.06 % round-trip costs at this accuracy. The strategy layer
+  cannot fix a 53 % model.
+* **Next iterations must bring new information, not new models:** Binance futures funding rate and
+  open interest (free via CCXT `fetchFundingRateHistory` / `fetchOpenInterestHistory`), stablecoin
+  flows, order-book imbalance, cross-asset context (ETH, SPX, DXY). Alternatively change the target
+  to next-day range/volatility, which is far more predictable than direction.
