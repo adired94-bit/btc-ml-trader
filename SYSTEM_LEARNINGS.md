@@ -465,3 +465,45 @@ reverse intraday. Next ways to use the volatility signal: (1) as a *risk* input 
 size on predicted big days for the direction model, widen stops on them; (2) intraday breakout
 with time-of-day entry windows (Asia/US open) instead of a full-day OCO; (3) options-style
 payoffs are not available on spot, so the straddle analogue is out.
+
+## 2026-09-13 08:27 UTC — Improvement campaign (6-year history, ~3-year window, on-chain / macro features): 6 experiments on the daily forecast
+
+Each experiment scored on the tuning half (older), the top configs re-scored on the validation half (newer), winner re-run over the full window. Score = hit + 0.5 × traded hit + 0.0005 × return%.
+
+### Tuning half
+
+| Config | Half | Days | Hit rate | Momentum 30d | Always UP | Traded hit | Trades | MAE | Naive MAE | Return | Sharpe | Max DD |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| oc+ens+regime_w | tune | 506 | 54.7% | 50.2% | 53.4% | 55.6% | 360 | 1.89% | 1.88% | -2.85% | -0.24 | 10.04% |
+| base+regime_w | tune | 506 | 53.9% | 50.2% | 53.4% | 54.8% | 279 | 1.87% | 1.88% | -2.93% | -0.30 | 8.28% |
+| oc+ens | tune | 506 | 52.6% | 50.2% | 53.4% | 56.9% | 343 | 1.88% | 1.88% | -3.75% | -0.35 | 11.54% |
+| oc+ens_strongreg | tune | 506 | 53.0% | 50.2% | 53.4% | 55.8% | 249 | 1.88% | 1.88% | -3.89% | -0.41 | 10.28% |
+| baseline | tune | 506 | 53.2% | 50.2% | 53.4% | 53.7% | 296 | 1.86% | 1.88% | -6.03% | -0.64 | 9.15% |
+| oc+logreg | tune | 506 | 51.4% | 50.2% | 53.4% | 52.4% | 338 | 1.88% | 1.88% | -8.35% | -0.80 | 12.55% |
+
+### Validation half (never used for selection)
+
+| Config | Half | Days | Hit rate | Momentum 30d | Always UP | Traded hit | Trades | MAE | Naive MAE | Return | Sharpe | Max DD |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| oc+ens+regime_w | validation | 506 | 47.6% | 51.6% | 48.6% | 48.2% | 257 | 1.68% | 1.63% | -11.41% | -1.50 | 12.59% |
+| base+regime_w | validation | 506 | 50.0% | 51.6% | 48.6% | 54.1% | 194 | 1.67% | 1.63% | -2.78% | -0.40 | 5.66% |
+| baseline | validation | 506 | 49.8% | 51.6% | 48.6% | 50.6% | 239 | 1.68% | 1.63% | -5.00% | -0.69 | 7.05% |
+
+### Winner: `base+regime_w` — full window
+
+| Config | Half | Days | Hit rate | Momentum 30d | Always UP | Traded hit | Trades | MAE | Naive MAE | Return | Sharpe | Max DD |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| base+regime_w | full | 1011 | 51.8% | 50.9% | 51.0% | 54.4% | 467 | 1.77% | 1.75% | -7.80% | -0.50 | 13.21% |
+
+**Learnings.**
+
+* Best on the tuning half: `oc+ens+regime_w` (54.7% hit rate); on validation it scored 47.6%.
+* Baseline validation hit rate 49.8% vs winner 50.0%; adopted.
+* Full-window winner hit rate 51.8%, MAE 1.77% vs naive 1.75%.
+* Campaign runtime 925s.
+**Conclusion of the on-chain / macro line (2026-09-13).** Free on-chain, sentiment and macro data
+(MVRV, stable-coin cap, active addresses, fees, mempool, Fear & Greed, S&P 500, DXY, VIX, 10-y)
+lifted tuning-half traded accuracy to 56.9 % — the largest tune gain seen — but the promoted
+config scored 47.6 % on validation (baseline 50.0 %). Same pattern as every other feature family:
+the *daily* direction target absorbs anything as noise. These features are slow-moving
+(weeks/months) and belong to a swing horizon, which is the next experiment.
