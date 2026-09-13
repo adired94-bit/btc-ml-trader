@@ -35,6 +35,7 @@ REG_STRONG = {
 }
 REGIME_W = {"trend_up": 1.5, "high_volatility": 1.5}
 LONG_SUBSET = ("baseline", "base+regime_w", "ext+ens", "ext+ens+regime_w", "ext+ens_strongreg", "base+logreg", "ext+ens_h72")
+ONCHAIN_SUBSET = ("baseline", "base+regime_w", "oc+ens", "oc+ens+regime_w", "oc+ens_strongreg", "oc+logreg")
 PATTERN_SUBSET = ("baseline", "base+regime_w", "pat+ens", "pat+ens+regime_w", "pat+ens_strongreg", "pat+logreg")
 FLOW_SUBSET = ("baseline", "base+regime_w", "flow+ens", "flow+ens+regime_w", "flow+ens_strongreg", "flow+logreg", "flow+ens+retrain7d")
 
@@ -56,6 +57,10 @@ def experiments(quick: bool) -> list[WF.WalkForwardConfig]:
         base.copy(label="ext+logreg_h72", feature_set="extended", model="logreg", horizon_bars=72),
         base.copy(label="ext+ens_h168", feature_set="extended", horizon_bars=168),
         base.copy(label="ext+logreg_h168", feature_set="extended", model="logreg", horizon_bars=168),
+        base.copy(label="oc+ens", feature_set="onchain"),
+        base.copy(label="oc+ens+regime_w", feature_set="onchain", regime_weights=REGIME_W),
+        base.copy(label="oc+ens_strongreg", feature_set="onchain", **REG_STRONG),
+        base.copy(label="oc+logreg", feature_set="onchain", model="logreg"),
         base.copy(label="pat+ens", feature_set="patterns"),
         base.copy(label="pat+ens+regime_w", feature_set="patterns", regime_weights=REGIME_W),
         base.copy(label="pat+ens_strongreg", feature_set="patterns", **REG_STRONG),
@@ -110,6 +115,7 @@ def main() -> None:
     parser.add_argument("--long", action="store_true", help="use the 6-year research cache and a ~3-year evaluation window")
     parser.add_argument("--flow", action="store_true", help="with --long: order-flow / derivatives feature experiments")
     parser.add_argument("--patterns", action="store_true", help="with --long: candlestick-pattern feature experiments")
+    parser.add_argument("--onchain", action="store_true", help="with --long: on-chain / sentiment / macro feature experiments")
     args = parser.parse_args()
     t0 = time.perf_counter()
 
@@ -119,8 +125,8 @@ def main() -> None:
         ohlcv = storage.load_cached(LONG_CACHE)
         if ohlcv is None:
             raise SystemExit("Run scripts/fetch_long_history.py first")
-        window = {"eval_start_days_ago": 1_100, "eval_end_days_ago": 90, "retrain_every_days": 21 if (args.flow or args.patterns) else 14}
-        subset = PATTERN_SUBSET if args.patterns else FLOW_SUBSET if args.flow else LONG_SUBSET
+        window = {"eval_start_days_ago": 1_100, "eval_end_days_ago": 90, "retrain_every_days": 21 if (args.flow or args.patterns or args.onchain) else 14}
+        subset = ONCHAIN_SUBSET if args.onchain else PATTERN_SUBSET if args.patterns else FLOW_SUBSET if args.flow else LONG_SUBSET
         exps = []
         for e in experiments(args.quick):
             if e.label not in subset:
@@ -170,7 +176,7 @@ def main() -> None:
 
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     entry = [
-        f"\n## {now} — Improvement campaign{' (6-year history, ~3-year window' + (', order-flow features)' if args.flow else ', candlestick patterns)' if args.patterns else ')') if args.long else ''}: {len(tune_rows)} experiments on the daily forecast\n",
+        f"\n## {now} — Improvement campaign{' (6-year history, ~3-year window' + (', order-flow features)' if args.flow else ', candlestick patterns)' if args.patterns else ', on-chain / macro features)' if args.onchain else ')') if args.long else ''}: {len(tune_rows)} experiments on the daily forecast\n",
         "Each experiment scored on the tuning half (older), the top configs re-scored on the validation half (newer), winner re-run over the full window. Score = hit + 0.5 × traded hit + 0.0005 × return%.\n",
         "### Tuning half\n", md_table(ranked), "\n### Validation half (never used for selection)\n", md_table(val_rows),
         f"\n### Winner: `{winner}` — full window\n", md_table([full_row]),
@@ -186,7 +192,7 @@ def main() -> None:
     entry.append(f"* Campaign runtime {time.perf_counter() - t0:.0f}s.\n")
     text = "\n".join(entry)
     WF.append_learnings(text)
-    out = settings.models_dir / ("improvement_campaign_patterns.json" if args.patterns else "improvement_campaign_flow.json" if args.flow else "improvement_campaign_long.json" if args.long else "improvement_campaign.json")
+    out = settings.models_dir / ("improvement_campaign_onchain.json" if args.onchain else "improvement_campaign_patterns.json" if args.patterns else "improvement_campaign_flow.json" if args.flow else "improvement_campaign_long.json" if args.long else "improvement_campaign.json")
     out.write_text(json.dumps({"tune": ranked, "validation": val_rows, "full": full_row, "winner": by_label[winner].to_dict()}, indent=2), encoding="utf-8")
     print("\n" + text)
     print(f"saved {out}")

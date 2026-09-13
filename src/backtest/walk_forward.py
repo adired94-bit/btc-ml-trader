@@ -225,6 +225,13 @@ def prepare_data(
         if alt is None:
             raise ValueError("feature_set='flow' needs data/*_alt.csv - run `python -m src.data.altdata` first")
         features = build_flow_features(ohlcv, indicators, alt)
+    elif feature_set == "onchain":
+        from src.data.onchain import build_onchain_features, load_onchain
+
+        daily = load_onchain()
+        if daily is None:
+            raise ValueError("feature_set='onchain' needs data/BTC_onchain_daily.csv - run `python -m src.data.onchain` first")
+        features = build_onchain_features(ohlcv, indicators, daily)
     elif feature_set == "patterns":
         from src.data.patterns import build_pattern_features
 
