@@ -1,0 +1,912 @@
+{
+  "idea": "09 trend filter (EMA-200 slope + price side) on the extended-features ensemble",
+  "config": {
+    "eval_start_days_ago": 365,
+    "eval_end_days_ago": 90,
+    "horizon_bars": 24,
+    "retrain_every_days": 14,
+    "min_train_rows": 1000,
+    "threshold": 0.55,
+    "atr_multiplier": 1.5,
+    "take_profit_rr": 2.0,
+    "risk_per_trade_pct": 0.01,
+    "initial_equity": 10000.0,
+    "fee_pct": 0.0004,
+    "slippage_pct": 0.0002,
+    "xgb_params": {
+      "n_estimators": 80,
+      "max_depth": 4,
+      "learning_rate": 0.05,
+      "n_jobs": 2
+    },
+    "lgbm_params": {
+      "n_estimators": 80,
+      "num_leaves": 15,
+      "learning_rate": 0.05,
+      "n_jobs": 2
+    },
+    "reg_params": {
+      "n_estimators": 80,
+      "num_leaves": 15,
+      "learning_rate": 0.03,
+      "subsample": 0.8,
+      "subsample_freq": 1,
+      "colsample_bytree": 0.8,
+      "min_child_samples": 30,
+      "reg_lambda": 2.0,
+      "verbose": -1,
+      "n_jobs": 2,
+      "random_state": 42
+    },
+    "regime_weights": {},
+    "skip_regimes": [],
+    "feature_set": "extended",
+    "model": "ensemble",
+    "logreg_c": 0.05,
+    "label": "ext+ens"
+  },
+  "walk_forward_days": 276,
+  "retrains": 20,
+  "walk_forward_runtime_s": 151.5605178999831,
+  "tune_split": "2026-01-29T00:00:00+00:00",
+  "tune_days": 138,
+  "validation_days": 138,
+  "core_strategies": [
+    "baseline",
+    "model+trend@0.55",
+    "pure_trend_slope24",
+    "pure_trend_slope24+price",
+    "model+trend@0.50"
+  ],
+  "grid_best_on_tune": "model+trend@0.50_s72p",
+  "results": {
+    "baseline": {
+      "strategy": {
+        "name": "baseline",
+        "threshold": 0.55,
+        "use_model": true,
+        "trend_filter": false,
+        "slope_bars": 24,
+        "require_price_side": true
+      },
+      "tune": {
+        "days": 138,
+        "directional_accuracy": 0.5362318840579711,
+        "days_with_view": 138,
+        "traded_days": 100,
+        "traded_directional_accuracy": 0.5,
+        "longs": 60,
+        "shorts": 40,
+        "win_rate": 0.46,
+        "total_return_pct": -4.769855139490087,
+        "sharpe_ratio": -1.6336812327578125,
+        "max_drawdown_pct": 8.717332816590295,
+        "exit_reasons": {
+          "CLOSE": 94,
+          "STOP": 5,
+          "TAKE_PROFIT": 1
+        }
+      },
+      "validation": {
+        "days": 138,
+        "directional_accuracy": 0.5072463768115942,
+        "days_with_view": 138,
+        "traded_days": 84,
+        "traded_directional_accuracy": 0.4523809523809524,
+        "longs": 50,
+        "shorts": 34,
+        "win_rate": 0.42857142857142855,
+        "total_return_pct": -3.72202647505786,
+        "sharpe_ratio": -1.5454965969409427,
+        "max_drawdown_pct": 3.8818331858696875,
+        "exit_reasons": {
+          "CLOSE": 78,
+          "STOP": 6
+        }
+      }
+    },
+    "model+trend@0.55": {
+      "strategy": {
+        "name": "model+trend@0.55",
+        "threshold": 0.55,
+        "use_model": true,
+        "trend_filter": true,
+        "slope_bars": 24,
+        "require_price_side": true
+      },
+      "tune": {
+        "days": 138,
+        "directional_accuracy": 0.5362318840579711,
+        "days_with_view": 138,
+        "traded_days": 19,
+        "traded_directional_accuracy": 0.42105263157894735,
+        "longs": 11,
+        "shorts": 8,
+        "win_rate": 0.42105263157894735,
+        "total_return_pct": -0.49884891571515544,
+        "sharpe_ratio": -0.3219175392879835,
+        "max_drawdown_pct": 3.3093234002753213,
+        "exit_reasons": {
+          "CLOSE": 18,
+          "STOP": 1
+        }
+      },
+      "validation": {
+        "days": 138,
+        "directional_accuracy": 0.5072463768115942,
+        "days_with_view": 138,
+        "traded_days": 22,
+        "traded_directional_accuracy": 0.4090909090909091,
+        "longs": 11,
+        "shorts": 11,
+        "win_rate": 0.36363636363636365,
+        "total_return_pct": -1.8498584468131574,
+        "sharpe_ratio": -2.008479475720436,
+        "max_drawdown_pct": 1.8498584468131574,
+        "exit_reasons": {
+          "CLOSE": 22
+        }
+      }
+    },
+    "pure_trend_slope24": {
+      "strategy": {
+        "name": "pure_trend_slope24",
+        "threshold": 0.0,
+        "use_model": false,
+        "trend_filter": false,
+        "slope_bars": 24,
+        "require_price_side": false
+      },
+      "tune": {
+        "days": 138,
+        "directional_accuracy": 0.45652173913043476,
+        "days_with_view": 138,
+        "traded_days": 138,
+        "traded_directional_accuracy": 0.45652173913043476,
+        "longs": 58,
+        "shorts": 80,
+        "win_rate": 0.43478260869565216,
+        "total_return_pct": 0.3407282819248403,
+        "sharpe_ratio": 0.14949822045757943,
+        "max_drawdown_pct": 5.058424238680493,
+        "exit_reasons": {
+          "CLOSE": 134,
+          "STOP": 4
+        }
+      },
+      "validation": {
+        "days": 138,
+        "directional_accuracy": 0.5652173913043478,
+        "days_with_view": 138,
+        "traded_days": 138,
+        "traded_directional_accuracy": 0.5652173913043478,
+        "longs": 59,
+        "shorts": 79,
+        "win_rate": 0.5289855072463768,
+        "total_return_pct": 3.901139086551275,
+        "sharpe_ratio": 1.1860660659781759,
+        "max_drawdown_pct": 4.822570784159208,
+        "exit_reasons": {
+          "CLOSE": 134,
+          "TAKE_PROFIT": 2,
+          "STOP": 2
+        }
+      }
+    },
+    "pure_trend_slope24+price": {
+      "strategy": {
+        "name": "pure_trend_slope24+price",
+        "threshold": 0.0,
+        "use_model": false,
+        "trend_filter": false,
+        "slope_bars": 24,
+        "require_price_side": true
+      },
+      "tune": {
+        "days": 138,
+        "directional_accuracy": 0.47107438016528924,
+        "days_with_view": 121,
+        "traded_days": 121,
+        "traded_directional_accuracy": 0.47107438016528924,
+        "longs": 51,
+        "shorts": 70,
+        "win_rate": 0.4462809917355372,
+        "total_return_pct": 1.6578775824999337,
+        "sharpe_ratio": 0.5775336130132518,
+        "max_drawdown_pct": 4.123261884592266,
+        "exit_reasons": {
+          "CLOSE": 117,
+          "STOP": 4
+        }
+      },
+      "validation": {
+        "days": 138,
+        "directional_accuracy": 0.56,
+        "days_with_view": 125,
+        "traded_days": 125,
+        "traded_directional_accuracy": 0.56,
+        "longs": 53,
+        "shorts": 72,
+        "win_rate": 0.52,
+        "total_return_pct": 2.3793674184945157,
+        "sharpe_ratio": 0.7670557476300703,
+        "max_drawdown_pct": 6.216572009675037,
+        "exit_reasons": {
+          "CLOSE": 121,
+          "TAKE_PROFIT": 2,
+          "STOP": 2
+        }
+      }
+    },
+    "model+trend@0.50": {
+      "strategy": {
+        "name": "model+trend@0.50",
+        "threshold": 0.5,
+        "use_model": true,
+        "trend_filter": true,
+        "slope_bars": 24,
+        "require_price_side": true
+      },
+      "tune": {
+        "days": 138,
+        "directional_accuracy": 0.5362318840579711,
+        "days_with_view": 138,
+        "traded_days": 29,
+        "traded_directional_accuracy": 0.5172413793103449,
+        "longs": 19,
+        "shorts": 10,
+        "win_rate": 0.4482758620689655,
+        "total_return_pct": 1.8130316657408274,
+        "sharpe_ratio": 1.0321941196420197,
+        "max_drawdown_pct": 2.626038849811241,
+        "exit_reasons": {
+          "CLOSE": 28,
+          "STOP": 1
+        }
+      },
+      "validation": {
+        "days": 138,
+        "directional_accuracy": 0.5072463768115942,
+        "days_with_view": 138,
+        "traded_days": 46,
+        "traded_directional_accuracy": 0.5652173913043478,
+        "longs": 25,
+        "shorts": 21,
+        "win_rate": 0.5,
+        "total_return_pct": -1.1690172521166997,
+        "sharpe_ratio": -0.8337008294882442,
+        "max_drawdown_pct": 1.686068595908885,
+        "exit_reasons": {
+          "CLOSE": 46
+        }
+      }
+    },
+    "model+trend@0.50_s24": {
+      "strategy": {
+        "name": "model+trend@0.50_s24",
+        "threshold": 0.5,
+        "use_model": true,
+        "trend_filter": true,
+        "slope_bars": 24,
+        "require_price_side": false
+      },
+      "tune": {
+        "days": 138,
+        "directional_accuracy": 0.5362318840579711,
+        "days_with_view": 138,
+        "traded_days": 39,
+        "traded_directional_accuracy": 0.48717948717948717,
+        "longs": 22,
+        "shorts": 17,
+        "win_rate": 0.4358974358974359,
+        "total_return_pct": 0.8727462915604001,
+        "sharpe_ratio": 0.487748624514755,
+        "max_drawdown_pct": 3.5694285352065758,
+        "exit_reasons": {
+          "CLOSE": 38,
+          "STOP": 1
+        }
+      },
+      "validation": {
+        "days": 138,
+        "directional_accuracy": 0.5072463768115942,
+        "days_with_view": 138,
+        "traded_days": 52,
+        "traded_directional_accuracy": 0.5961538461538461,
+        "longs": 28,
+        "shorts": 24,
+        "win_rate": 0.5384615384615384,
+        "total_return_pct": 0.6925515879130151,
+        "sharpe_ratio": 0.46316042166233573,
+        "max_drawdown_pct": 1.6860685959088961,
+        "exit_reasons": {
+          "CLOSE": 52
+        }
+      }
+    },
+    "model+trend@0.50_s72p": {
+      "strategy": {
+        "name": "model+trend@0.50_s72p",
+        "threshold": 0.5,
+        "use_model": true,
+        "trend_filter": true,
+        "slope_bars": 72,
+        "require_price_side": true
+      },
+      "tune": {
+        "days": 138,
+        "directional_accuracy": 0.5362318840579711,
+        "days_with_view": 138,
+        "traded_days": 25,
+        "traded_directional_accuracy": 0.56,
+        "longs": 15,
+        "shorts": 10,
+        "win_rate": 0.48,
+        "total_return_pct": 1.308981019758404,
+        "sharpe_ratio": 0.8270317023802324,
+        "max_drawdown_pct": 2.017490279387568,
+        "exit_reasons": {
+          "CLOSE": 24,
+          "STOP": 1
+        }
+      },
+      "validation": {
+        "days": 138,
+        "directional_accuracy": 0.5072463768115942,
+        "days_with_view": 138,
+        "traded_days": 42,
+        "traded_directional_accuracy": 0.5952380952380952,
+        "longs": 23,
+        "shorts": 19,
+        "win_rate": 0.5238095238095238,
+        "total_return_pct": -0.7948582249739045,
+        "sharpe_ratio": -0.5725177633538338,
+        "max_drawdown_pct": 1.686068595908885,
+        "exit_reasons": {
+          "CLOSE": 42
+        }
+      }
+    },
+    "model+trend@0.50_s72": {
+      "strategy": {
+        "name": "model+trend@0.50_s72",
+        "threshold": 0.5,
+        "use_model": true,
+        "trend_filter": true,
+        "slope_bars": 72,
+        "require_price_side": false
+      },
+      "tune": {
+        "days": 138,
+        "directional_accuracy": 0.5362318840579711,
+        "days_with_view": 138,
+        "traded_days": 41,
+        "traded_directional_accuracy": 0.43902439024390244,
+        "longs": 22,
+        "shorts": 19,
+        "win_rate": 0.3902439024390244,
+        "total_return_pct": -2.030667499700489,
+        "sharpe_ratio": -1.07739662629275,
+        "max_drawdown_pct": 4.372952796387541,
+        "exit_reasons": {
+          "CLOSE": 39,
+          "STOP": 2
+        }
+      },
+      "validation": {
+        "days": 138,
+        "directional_accuracy": 0.5072463768115942,
+        "days_with_view": 138,
+        "traded_days": 55,
+        "traded_directional_accuracy": 0.6363636363636364,
+        "longs": 27,
+        "shorts": 28,
+        "win_rate": 0.5818181818181818,
+        "total_return_pct": 1.9611124709262517,
+        "sharpe_ratio": 1.215517987793592,
+        "max_drawdown_pct": 1.4459384699428202,
+        "exit_reasons": {
+          "CLOSE": 55
+        }
+      }
+    },
+    "model+trend@0.50_s168p": {
+      "strategy": {
+        "name": "model+trend@0.50_s168p",
+        "threshold": 0.5,
+        "use_model": true,
+        "trend_filter": true,
+        "slope_bars": 168,
+        "require_price_side": true
+      },
+      "tune": {
+        "days": 138,
+        "directional_accuracy": 0.5362318840579711,
+        "days_with_view": 138,
+        "traded_days": 25,
+        "traded_directional_accuracy": 0.52,
+        "longs": 15,
+        "shorts": 10,
+        "win_rate": 0.44,
+        "total_return_pct": 0.5489811248989396,
+        "sharpe_ratio": 0.3616448836619897,
+        "max_drawdown_pct": 2.590208950921813,
+        "exit_reasons": {
+          "CLOSE": 24,
+          "STOP": 1
+        }
+      },
+      "validation": {
+        "days": 138,
+        "directional_accuracy": 0.5072463768115942,
+        "days_with_view": 138,
+        "traded_days": 40,
+        "traded_directional_accuracy": 0.6,
+        "longs": 24,
+        "shorts": 16,
+        "win_rate": 0.525,
+        "total_return_pct": -0.4583774032726806,
+        "sharpe_ratio": -0.33822668521456617,
+        "max_drawdown_pct": 1.8160606154575154,
+        "exit_reasons": {
+          "CLOSE": 40
+        }
+      }
+    },
+    "model+trend@0.50_s168": {
+      "strategy": {
+        "name": "model+trend@0.50_s168",
+        "threshold": 0.5,
+        "use_model": true,
+        "trend_filter": true,
+        "slope_bars": 168,
+        "require_price_side": false
+      },
+      "tune": {
+        "days": 138,
+        "directional_accuracy": 0.5362318840579711,
+        "days_with_view": 138,
+        "traded_days": 52,
+        "traded_directional_accuracy": 0.5192307692307693,
+        "longs": 31,
+        "shorts": 21,
+        "win_rate": 0.4423076923076923,
+        "total_return_pct": -2.06180064997159,
+        "sharpe_ratio": -0.9533784144204464,
+        "max_drawdown_pct": 4.591391497523444,
+        "exit_reasons": {
+          "CLOSE": 49,
+          "STOP": 3
+        }
+      },
+      "validation": {
+        "days": 138,
+        "directional_accuracy": 0.5072463768115942,
+        "days_with_view": 138,
+        "traded_days": 59,
+        "traded_directional_accuracy": 0.6271186440677966,
+        "longs": 32,
+        "shorts": 27,
+        "win_rate": 0.576271186440678,
+        "total_return_pct": 1.9078913572887046,
+        "sharpe_ratio": 1.0778487036925544,
+        "max_drawdown_pct": 1.7338469954873537,
+        "exit_reasons": {
+          "CLOSE": 58,
+          "STOP": 1
+        }
+      }
+    },
+    "model+trend@0.55_s24": {
+      "strategy": {
+        "name": "model+trend@0.55_s24",
+        "threshold": 0.55,
+        "use_model": true,
+        "trend_filter": true,
+        "slope_bars": 24,
+        "require_price_side": false
+      },
+      "tune": {
+        "days": 138,
+        "directional_accuracy": 0.5362318840579711,
+        "days_with_view": 138,
+        "traded_days": 24,
+        "traded_directional_accuracy": 0.375,
+        "longs": 12,
+        "shorts": 12,
+        "win_rate": 0.375,
+        "total_return_pct": -1.3528781639279397,
+        "sharpe_ratio": -0.853767256353836,
+        "max_drawdown_pct": 4.501273611124102,
+        "exit_reasons": {
+          "CLOSE": 23,
+          "STOP": 1
+        }
+      },
+      "validation": {
+        "days": 138,
+        "directional_accuracy": 0.5072463768115942,
+        "days_with_view": 138,
+        "traded_days": 24,
+        "traded_directional_accuracy": 0.4583333333333333,
+        "longs": 11,
+        "shorts": 13,
+        "win_rate": 0.4166666666666667,
+        "total_return_pct": -1.6112918709166424,
+        "sharpe_ratio": -1.7242269811287998,
+        "max_drawdown_pct": 1.6830098830386109,
+        "exit_reasons": {
+          "CLOSE": 24
+        }
+      }
+    },
+    "model+trend@0.55_s72p": {
+      "strategy": {
+        "name": "model+trend@0.55_s72p",
+        "threshold": 0.55,
+        "use_model": true,
+        "trend_filter": true,
+        "slope_bars": 72,
+        "require_price_side": true
+      },
+      "tune": {
+        "days": 138,
+        "directional_accuracy": 0.5362318840579711,
+        "days_with_view": 138,
+        "traded_days": 14,
+        "traded_directional_accuracy": 0.42857142857142855,
+        "longs": 8,
+        "shorts": 6,
+        "win_rate": 0.42857142857142855,
+        "total_return_pct": -1.0382718649713962,
+        "sharpe_ratio": -0.8390290018532633,
+        "max_drawdown_pct": 2.7050450868224996,
+        "exit_reasons": {
+          "CLOSE": 13,
+          "STOP": 1
+        }
+      },
+      "validation": {
+        "days": 138,
+        "directional_accuracy": 0.5072463768115942,
+        "days_with_view": 138,
+        "traded_days": 18,
+        "traded_directional_accuracy": 0.4444444444444444,
+        "longs": 9,
+        "shorts": 9,
+        "win_rate": 0.3888888888888889,
+        "total_return_pct": -1.4782769805926188,
+        "sharpe_ratio": -1.6773526182093985,
+        "max_drawdown_pct": 1.5607670829577147,
+        "exit_reasons": {
+          "CLOSE": 18
+        }
+      }
+    },
+    "model+trend@0.55_s72": {
+      "strategy": {
+        "name": "model+trend@0.55_s72",
+        "threshold": 0.55,
+        "use_model": true,
+        "trend_filter": true,
+        "slope_bars": 72,
+        "require_price_side": false
+      },
+      "tune": {
+        "days": 138,
+        "directional_accuracy": 0.5362318840579711,
+        "days_with_view": 138,
+        "traded_days": 26,
+        "traded_directional_accuracy": 0.34615384615384615,
+        "longs": 13,
+        "shorts": 13,
+        "win_rate": 0.34615384615384615,
+        "total_return_pct": -3.7565110168551796,
+        "sharpe_ratio": -2.544057425541104,
+        "max_drawdown_pct": 5.316864804084975,
+        "exit_reasons": {
+          "CLOSE": 24,
+          "STOP": 2
+        }
+      },
+      "validation": {
+        "days": 138,
+        "directional_accuracy": 0.5072463768115942,
+        "days_with_view": 138,
+        "traded_days": 25,
+        "traded_directional_accuracy": 0.6,
+        "longs": 11,
+        "shorts": 14,
+        "win_rate": 0.56,
+        "total_return_pct": 0.5923047447277119,
+        "sharpe_ratio": 0.5695000581113344,
+        "max_drawdown_pct": 1.5368904510972836,
+        "exit_reasons": {
+          "CLOSE": 25
+        }
+      }
+    },
+    "model+trend@0.55_s168p": {
+      "strategy": {
+        "name": "model+trend@0.55_s168p",
+        "threshold": 0.55,
+        "use_model": true,
+        "trend_filter": true,
+        "slope_bars": 168,
+        "require_price_side": true
+      },
+      "tune": {
+        "days": 138,
+        "directional_accuracy": 0.5362318840579711,
+        "days_with_view": 138,
+        "traded_days": 14,
+        "traded_directional_accuracy": 0.35714285714285715,
+        "longs": 9,
+        "shorts": 5,
+        "win_rate": 0.35714285714285715,
+        "total_return_pct": -1.5638007365879059,
+        "sharpe_ratio": -1.3038030769394973,
+        "max_drawdown_pct": 2.9106345862932703,
+        "exit_reasons": {
+          "CLOSE": 13,
+          "STOP": 1
+        }
+      },
+      "validation": {
+        "days": 138,
+        "directional_accuracy": 0.5072463768115942,
+        "days_with_view": 138,
+        "traded_days": 16,
+        "traded_directional_accuracy": 0.4375,
+        "longs": 9,
+        "shorts": 7,
+        "win_rate": 0.375,
+        "total_return_pct": -1.084633686516967,
+        "sharpe_ratio": -1.354284388545134,
+        "max_drawdown_pct": 1.1674533778765372,
+        "exit_reasons": {
+          "CLOSE": 16
+        }
+      }
+    },
+    "model+trend@0.55_s168": {
+      "strategy": {
+        "name": "model+trend@0.55_s168",
+        "threshold": 0.55,
+        "use_model": true,
+        "trend_filter": true,
+        "slope_bars": 168,
+        "require_price_side": false
+      },
+      "tune": {
+        "days": 138,
+        "directional_accuracy": 0.5362318840579711,
+        "days_with_view": 138,
+        "traded_days": 32,
+        "traded_directional_accuracy": 0.40625,
+        "longs": 19,
+        "shorts": 13,
+        "win_rate": 0.375,
+        "total_return_pct": -4.39379801385299,
+        "sharpe_ratio": -2.625082582678482,
+        "max_drawdown_pct": 6.291390688148024,
+        "exit_reasons": {
+          "CLOSE": 29,
+          "STOP": 3
+        }
+      },
+      "validation": {
+        "days": 138,
+        "directional_accuracy": 0.5072463768115942,
+        "days_with_view": 138,
+        "traded_days": 29,
+        "traded_directional_accuracy": 0.5862068965517241,
+        "longs": 15,
+        "shorts": 14,
+        "win_rate": 0.5517241379310345,
+        "total_return_pct": 1.4697252977964537,
+        "sharpe_ratio": 1.2831028568879674,
+        "max_drawdown_pct": 0.8902541431012545,
+        "exit_reasons": {
+          "CLOSE": 29
+        }
+      }
+    },
+    "pure_trend_slope72": {
+      "strategy": {
+        "name": "pure_trend_slope72",
+        "threshold": 0.0,
+        "use_model": false,
+        "trend_filter": false,
+        "slope_bars": 72,
+        "require_price_side": false
+      },
+      "tune": {
+        "days": 138,
+        "directional_accuracy": 0.427536231884058,
+        "days_with_view": 138,
+        "traded_days": 138,
+        "traded_directional_accuracy": 0.427536231884058,
+        "longs": 56,
+        "shorts": 82,
+        "win_rate": 0.39855072463768115,
+        "total_return_pct": -4.806111732729823,
+        "sharpe_ratio": -1.5275577060917152,
+        "max_drawdown_pct": 6.357575307922636,
+        "exit_reasons": {
+          "CLOSE": 132,
+          "STOP": 6
+        }
+      },
+      "validation": {
+        "days": 138,
+        "directional_accuracy": 0.6014492753623188,
+        "days_with_view": 138,
+        "traded_days": 138,
+        "traded_directional_accuracy": 0.6014492753623188,
+        "longs": 54,
+        "shorts": 84,
+        "win_rate": 0.5652173913043478,
+        "total_return_pct": 6.7804342052013356,
+        "sharpe_ratio": 2.013835645115778,
+        "max_drawdown_pct": 2.4903857656425,
+        "exit_reasons": {
+          "CLOSE": 134,
+          "TAKE_PROFIT": 2,
+          "STOP": 2
+        }
+      }
+    },
+    "pure_trend_slope72+price": {
+      "strategy": {
+        "name": "pure_trend_slope72+price",
+        "threshold": 0.0,
+        "use_model": false,
+        "trend_filter": false,
+        "slope_bars": 72,
+        "require_price_side": true
+      },
+      "tune": {
+        "days": 138,
+        "directional_accuracy": 0.45045045045045046,
+        "days_with_view": 111,
+        "traded_days": 111,
+        "traded_directional_accuracy": 0.45045045045045046,
+        "longs": 45,
+        "shorts": 66,
+        "win_rate": 0.42342342342342343,
+        "total_return_pct": -0.7501454385104966,
+        "sharpe_ratio": -0.22011465829889715,
+        "max_drawdown_pct": 4.704437210577117,
+        "exit_reasons": {
+          "CLOSE": 107,
+          "STOP": 4
+        }
+      },
+      "validation": {
+        "days": 138,
+        "directional_accuracy": 0.5877192982456141,
+        "days_with_view": 114,
+        "traded_days": 114,
+        "traded_directional_accuracy": 0.5877192982456141,
+        "longs": 45,
+        "shorts": 69,
+        "win_rate": 0.543859649122807,
+        "total_return_pct": 4.047817519543484,
+        "sharpe_ratio": 1.291924446580667,
+        "max_drawdown_pct": 4.610693722112657,
+        "exit_reasons": {
+          "CLOSE": 110,
+          "TAKE_PROFIT": 2,
+          "STOP": 2
+        }
+      }
+    },
+    "pure_trend_slope168": {
+      "strategy": {
+        "name": "pure_trend_slope168",
+        "threshold": 0.0,
+        "use_model": false,
+        "trend_filter": false,
+        "slope_bars": 168,
+        "require_price_side": false
+      },
+      "tune": {
+        "days": 138,
+        "directional_accuracy": 0.4782608695652174,
+        "days_with_view": 138,
+        "traded_days": 138,
+        "traded_directional_accuracy": 0.4782608695652174,
+        "longs": 63,
+        "shorts": 75,
+        "win_rate": 0.43478260869565216,
+        "total_return_pct": -4.425869694103657,
+        "sharpe_ratio": -1.422742104360373,
+        "max_drawdown_pct": 6.478519161826712,
+        "exit_reasons": {
+          "CLOSE": 132,
+          "STOP": 6
+        }
+      },
+      "validation": {
+        "days": 138,
+        "directional_accuracy": 0.6014492753623188,
+        "days_with_view": 138,
+        "traded_days": 138,
+        "traded_directional_accuracy": 0.6014492753623188,
+        "longs": 60,
+        "shorts": 78,
+        "win_rate": 0.5652173913043478,
+        "total_return_pct": 6.999888996984294,
+        "sharpe_ratio": 2.066869151050543,
+        "max_drawdown_pct": 2.3506684461175653,
+        "exit_reasons": {
+          "CLOSE": 133,
+          "STOP": 3,
+          "TAKE_PROFIT": 2
+        }
+      }
+    },
+    "pure_trend_slope168+price": {
+      "strategy": {
+        "name": "pure_trend_slope168+price",
+        "threshold": 0.0,
+        "use_model": false,
+        "trend_filter": false,
+        "slope_bars": 168,
+        "require_price_side": true
+      },
+      "tune": {
+        "days": 138,
+        "directional_accuracy": 0.48,
+        "days_with_view": 100,
+        "traded_days": 100,
+        "traded_directional_accuracy": 0.48,
+        "longs": 43,
+        "shorts": 57,
+        "win_rate": 0.45,
+        "total_return_pct": -0.31969711650317034,
+        "sharpe_ratio": -0.08546723377553407,
+        "max_drawdown_pct": 3.7203562824382974,
+        "exit_reasons": {
+          "CLOSE": 97,
+          "STOP": 3
+        }
+      },
+      "validation": {
+        "days": 138,
+        "directional_accuracy": 0.5943396226415094,
+        "days_with_view": 106,
+        "traded_days": 106,
+        "traded_directional_accuracy": 0.5943396226415094,
+        "longs": 44,
+        "shorts": 62,
+        "win_rate": 0.5471698113207547,
+        "total_return_pct": 4.44304046007209,
+        "sharpe_ratio": 1.465585131474526,
+        "max_drawdown_pct": 4.063242274206191,
+        "exit_reasons": {
+          "CLOSE": 102,
+          "TAKE_PROFIT": 2,
+          "STOP": 2
+        }
+      }
+    }
+  },
+  "agreement_diagnostics": {
+    "tune": {
+      "agree_days": 29,
+      "model_acc_when_agree": 0.5172413793103449,
+      "disagree_days": 92,
+      "model_acc_when_disagree": 0.5434782608695652
+    },
+    "validation": {
+      "agree_days": 46,
+      "model_acc_when_agree": 0.5652173913043478,
+      "disagree_days": 79,
+      "model_acc_when_disagree": 0.4430379746835443
+    }
+  },
+  "report_markdown": "## Core comparison (tune half)\n| Strategy | Half | Days | Dir acc | Traded | Traded acc | Return | Sharpe | Max DD |\n|---|---|---|---|---|---|---|---|---|\n| baseline | tune | 138 | 53.6% | 100 | 50.0% | -4.77% | -1.63 | 8.72% |\n| model+trend@0.55 | tune | 138 | 53.6% | 19 | 42.1% | -0.50% | -0.32 | 3.31% |\n| pure_trend_slope24 | tune | 138 | 45.7% | 138 | 45.7% | +0.34% | 0.15 | 5.06% |\n| pure_trend_slope24+price | tune | 138 | 47.1% | 121 | 47.1% | +1.66% | 0.58 | 4.12% |\n| model+trend@0.50 | tune | 138 | 53.6% | 29 | 51.7% | +1.81% | 1.03 | 2.63% |\n\n## Core comparison (validation half)\n| Strategy | Half | Days | Dir acc | Traded | Traded acc | Return | Sharpe | Max DD |\n|---|---|---|---|---|---|---|---|---|\n| baseline | validation | 138 | 50.7% | 84 | 45.2% | -3.72% | -1.55 | 3.88% |\n| model+trend@0.55 | validation | 138 | 50.7% | 22 | 40.9% | -1.85% | -2.01 | 1.85% |\n| pure_trend_slope24 | validation | 138 | 56.5% | 138 | 56.5% | +3.90% | 1.19 | 4.82% |\n| pure_trend_slope24+price | validation | 138 | 56.0% | 125 | 56.0% | +2.38% | 0.77 | 6.22% |\n| model+trend@0.50 | validation | 138 | 50.7% | 46 | 56.5% | -1.17% | -0.83 | 1.69% |\n\n## Grid (tune half) - best by Sharpe: model+trend@0.50_s72p\n| Strategy | Half | Days | Dir acc | Traded | Traded acc | Return | Sharpe | Max DD |\n|---|---|---|---|---|---|---|---|---|\n| model+trend@0.50_s72p | tune | 138 | 53.6% | 25 | 56.0% | +1.31% | 0.83 | 2.02% |\n| model+trend@0.50_s24 | tune | 138 | 53.6% | 39 | 48.7% | +0.87% | 0.49 | 3.57% |\n| model+trend@0.50_s168p | tune | 138 | 53.6% | 25 | 52.0% | +0.55% | 0.36 | 2.59% |\n| pure_trend_slope168+price | tune | 138 | 48.0% | 100 | 48.0% | -0.32% | -0.09 | 3.72% |\n| pure_trend_slope72+price | tune | 138 | 45.0% | 111 | 45.0% | -0.75% | -0.22 | 4.70% |\n| model+trend@0.55_s24 | tune | 138 | 53.6% | 24 | 37.5% | -1.35% | -0.85 | 4.50% |\n| model+trend@0.50_s168 | tune | 138 | 53.6% | 52 | 51.9% | -2.06% | -0.95 | 4.59% |\n| model+trend@0.50_s72 | tune | 138 | 53.6% | 41 | 43.9% | -2.03% | -1.08 | 4.37% |\n| pure_trend_slope168 | tune | 138 | 47.8% | 138 | 47.8% | -4.43% | -1.42 | 6.48% |\n| pure_trend_slope72 | tune | 138 | 42.8% | 138 | 42.8% | -4.81% | -1.53 | 6.36% |\n| model+trend@0.55_s72 | tune | 138 | 53.6% | 26 | 34.6% | -3.76% | -2.54 | 5.32% |\n| model+trend@0.55_s168 | tune | 138 | 53.6% | 32 | 40.6% | -4.39% | -2.63 | 6.29% |\n| model+trend@0.55_s72p | tune | 138 | 53.6% | 14 | 42.9% | -1.04% | -0.84 | 2.71% |\n| model+trend@0.55_s168p | tune | 138 | 53.6% | 14 | 35.7% | -1.56% | -1.30 | 2.91% |\n\n## Grid winner on validation\n| Strategy | Half | Days | Dir acc | Traded | Traded acc | Return | Sharpe | Max DD |\n|---|---|---|---|---|---|---|---|---|\n| model+trend@0.50_s72p | validation | 138 | 50.7% | 42 | 59.5% | -0.79% | -0.57 | 1.69% |",
+  "total_runtime_s": 186.77013760001864
+}

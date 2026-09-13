@@ -342,3 +342,85 @@ Each experiment scored on the tuning half (older), the top configs re-scored on 
   (2) cross-asset context (ETH/BTC relative strength, SPX/DXY daily);
   (3) meta-labeling: a second model that predicts *when* the first one is right, and trading only then;
   (4) on-chain / stablecoin flow data (paid sources).
+
+## 2026-09-13 07:27 UTC — Improvement campaign (6-year history, ~3-year window, candlestick patterns): 6 experiments on the daily forecast
+
+Each experiment scored on the tuning half (older), the top configs re-scored on the validation half (newer), winner re-run over the full window. Score = hit + 0.5 × traded hit + 0.0005 × return%.
+
+### Tuning half
+
+| Config | Half | Days | Hit rate | Momentum 30d | Always UP | Traded hit | Trades | MAE | Naive MAE | Return | Sharpe | Max DD |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| pat+logreg | tune | 506 | 54.9% | 50.2% | 53.4% | 53.8% | 260 | 1.87% | 1.88% | -8.86% | -1.08 | 12.84% |
+| base+regime_w | tune | 506 | 53.9% | 50.2% | 53.4% | 54.8% | 279 | 1.87% | 1.88% | -2.93% | -0.30 | 8.28% |
+| baseline | tune | 506 | 53.2% | 50.2% | 53.4% | 53.7% | 296 | 1.86% | 1.88% | -6.03% | -0.64 | 9.15% |
+| pat+ens_strongreg | tune | 506 | 51.2% | 50.2% | 53.4% | 54.2% | 236 | 1.87% | 1.88% | -6.37% | -0.77 | 11.78% |
+| pat+ens | tune | 506 | 50.6% | 50.2% | 53.4% | 52.1% | 338 | 1.87% | 1.88% | -12.20% | -1.32 | 12.83% |
+| pat+ens+regime_w | tune | 506 | 49.0% | 50.2% | 53.4% | 52.5% | 301 | 1.86% | 1.88% | -11.98% | -1.37 | 13.50% |
+
+### Validation half (never used for selection)
+
+| Config | Half | Days | Hit rate | Momentum 30d | Always UP | Traded hit | Trades | MAE | Naive MAE | Return | Sharpe | Max DD |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| pat+logreg | validation | 506 | 50.2% | 51.6% | 48.6% | 51.2% | 205 | 1.70% | 1.63% | -7.27% | -1.02 | 12.63% |
+| base+regime_w | validation | 506 | 50.0% | 51.6% | 48.6% | 54.1% | 194 | 1.67% | 1.63% | -2.78% | -0.40 | 5.66% |
+| baseline | validation | 506 | 49.8% | 51.6% | 48.6% | 50.6% | 239 | 1.68% | 1.63% | -5.00% | -0.69 | 7.05% |
+
+### Winner: `base+regime_w` — full window
+
+| Config | Half | Days | Hit rate | Momentum 30d | Always UP | Traded hit | Trades | MAE | Naive MAE | Return | Sharpe | Max DD |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| base+regime_w | full | 1011 | 51.8% | 50.9% | 51.0% | 54.4% | 467 | 1.77% | 1.75% | -7.80% | -0.50 | 13.21% |
+
+**Learnings.**
+
+* Best on the tuning half: `pat+logreg` (54.9% hit rate); on validation it scored 50.2%.
+* Baseline validation hit rate 49.8% vs winner 50.0%; adopted.
+* Full-window winner hit rate 51.8%, MAE 1.77% vs naive 1.75%.
+* Campaign runtime 1345s.
+
+## 2026-09-13 — Ten parallel research agents (2-year data; tune 365→227 days ago, validation 227→90)
+
+Each agent implemented one idea in an isolated worktree, evaluated it with the shared protocol
+(extended features, XGB+LGBM 80 trees, retrain 14 d, `simulate_day_trade`, selection on the
+tuning half only). Scripts: `scripts/experiments/idea01..10_*.py`; raw numbers:
+`models/experiments/idea*.json`. Common baseline: tune 53.2 % hit / 49.5 % traded (101) / −4.9 %;
+validation 47.1 % / 44.2 % (86) / −4.1 %. Momentum-30d benchmark 50.4 % / 55.1 %.
+
+| # | Idea | Tune (traded hit, return) | Validation (traded hit, return) | Verdict |
+|---|---|---|---|---|
+| 1 | Meta-labeling (2nd model predicts when 1st is right) | 44.9 % (49), −5.5 % | 50.7 % (69), −1.1 % | ✗ meta OOS AUC 0.51; primary confidence is *anti*-predictive (AUC 0.39/0.45) |
+| 2 | Isotonic / Platt calibration before gating | 53.0 % (83), −2.8 % | 47.5 % (80), −3.1 % | ✗ raw Brier worse than the constant base-rate predictor; nothing monotone to calibrate |
+| 3 | ETH / SOL cross-asset features | 41–48 %, −8 to −12 % | 46–54 %, −3 to −5 % | ✗ worse on tune in every variant; model spends 23 % of gain learning noise from ETH |
+| 4 | Decision hour + calendar filters | no_weekend 51.4 % (72), −2.8 % | 50.9 % (57), −1.1 % | ± hour ranking does not transfer (ρ = 0.10); **skip-weekend helped on both halves** (Sat trades 36 %/21 %) |
+| 5 | Volatility-scaled 3-class labels | k=0.5: 55.4 % (74), +1.9 % | 49.3 % (71), −1.1 % | ✗ FLAT band swallows 44–82 % of bars; tune gain vanished |
+| 6 | Rolling / time-decayed training window | all 3–5 pp worse than expanding | ranking inverted | ✗ shorter memory = more over-confident trades, not better ones |
+| 7 | Multi-horizon (24/72/168 h) agreement | all3 48.0 % (77), −7.1 % | 49.2 % (63), −0.5 % | ✗ horizons share features (agree 62 % of days); 168 h model 43–45 % |
+| 8 | Feature selection (top 8/15/25) | all ≤ baseline | 45–48 % | ✗ 32/56 features have negative permutation importance; #1 feature is day-of-month = seasonal artefact |
+| 9 | Trade only with the EMA-200 trend | @0.50: 51.7 % (29), +1.8 % | 56.5 % (46), −1.2 % | ✗ works only by trading less; pure trend rule 45.7 % → 56.5 % (regime-dependent) |
+| 10 | Mean reversion at RSI / %B extremes | fade 60 % (25) | fade 39 % (23) | ✗ full 2 y: overbought→down 53 %, oversold→up 42 %; noise |
+
+**Cross-cutting learnings (this is the important part).**
+
+1. **The confidence gate hurts.** Four independent agents (1, 2, 5, 7) found the same thing:
+   trading *all* days beats trading only "confident" days in both halves (e.g. 53.2 %/47.1 % vs
+   49.5 %/44.2 %), and traded accuracy falls monotonically from threshold 0.50 → 0.55 → 0.60. The
+   ensemble's probability magnitude carries no information; high confidence mostly marks strongly
+   trending days where the model is late. → Decision: the 0.55 gate stays only as a *trade-count*
+   limiter; do not interpret it as skill. Any future gating must first pass the **Brier-vs-base-rate
+   test** proposed by agent 2 (if OOS Brier ≥ climatological Brier, do not threshold at all).
+2. **Two-year halves are too short to rank anything.** 138-day halves give a ±4–6 pp standard error,
+   and every "winner" flipped sign between halves. All future experiments run on the 6-year cache
+   (≥ 500-day halves).
+3. **Nothing in the strategy layer creates an edge** — filters, calibration, meta-models, memory
+   length, agreement rules and feature pruning all merely change the trade count. The direction
+   target itself has ~no signal in price/volume/pattern/cross-crypto features.
+4. **Only cheap risk filter that survived both halves:** skip weekend windows (−4.1 % → −1.1 % on
+   validation, drawdown halved). Still negative P&L; to be confirmed on 6-year data.
+5. Candlestick patterns (separate 6-year campaign, `improvement_campaign_patterns.json`): `pat+*`
+   variants 49–55 % on tuning, none beat `base+regime_w` on validation → ✗.
+
+**Where the effort goes next (decided):** the volatility / range target and breakout execution
+(`scripts/volatility_target.py`, AUC 0.63 on a smoke window), non-crypto macro context (SPX, DXY,
+gold; the only cross-asset variant with a causal story), and paid/alt data (on-chain, exchange
+flows). Direction-only work on OHLCV is closed.

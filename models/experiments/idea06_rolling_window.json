@@ -1,0 +1,306 @@
+{
+  "results": {
+    "baseline_expanding": {
+      "spec": {
+        "label": "baseline_expanding",
+        "window_days": null,
+        "half_life_days": null
+      },
+      "tune": {
+        "days": 139,
+        "hit": 0.5323741007194245,
+        "traded_days": 101,
+        "traded_hit": 0.49504950495049505,
+        "return_pct": -4.8885666804540095,
+        "sharpe": -1.6700380933752137,
+        "max_dd": 8.717332816590295,
+        "momentum_hit": 0.5035971223021583,
+        "always_up": 0.48201438848920863,
+        "up_predictions": 86,
+        "retrains": 10,
+        "mean_train_rows": 9545.0,
+        "mean_effective_rows": 9545.0,
+        "runtime_s": 66.8
+      },
+      "validation": {
+        "days": 138,
+        "hit": 0.47101449275362317,
+        "traded_days": 86,
+        "traded_hit": 0.4418604651162791,
+        "return_pct": -4.144776568618214,
+        "sharpe": -1.6503022050735732,
+        "max_dd": 4.303881578932267,
+        "momentum_hit": 0.5507246376811594,
+        "always_up": 0.45652173913043476,
+        "up_predictions": 68,
+        "retrains": 10,
+        "mean_train_rows": 12857.0,
+        "mean_effective_rows": 12857.0,
+        "runtime_s": 64.4
+      }
+    },
+    "rolling_90d": {
+      "spec": {
+        "label": "rolling_90d",
+        "window_days": 90,
+        "half_life_days": null
+      },
+      "tune": {
+        "days": 139,
+        "hit": 0.49640287769784175,
+        "traded_days": 115,
+        "traded_hit": 0.5217391304347826,
+        "return_pct": -5.6324840512940515,
+        "sharpe": -2.099655910065027,
+        "max_dd": 6.782888540029608,
+        "momentum_hit": 0.5035971223021583,
+        "always_up": 0.48201438848920863,
+        "up_predictions": 67,
+        "retrains": 10,
+        "mean_train_rows": 2160.0,
+        "mean_effective_rows": 2160.0,
+        "runtime_s": 32.7
+      },
+      "validation": {
+        "days": 138,
+        "hit": 0.463768115942029,
+        "traded_days": 124,
+        "traded_hit": 0.4596774193548387,
+        "return_pct": -0.8627261776672057,
+        "sharpe": -0.24161354300434335,
+        "max_dd": 7.57257073416211,
+        "momentum_hit": 0.5507246376811594,
+        "always_up": 0.45652173913043476,
+        "up_predictions": 75,
+        "retrains": 10,
+        "mean_train_rows": 2160.0,
+        "mean_effective_rows": 2160.0,
+        "runtime_s": 41.6
+      }
+    },
+    "rolling_180d": {
+      "spec": {
+        "label": "rolling_180d",
+        "window_days": 180,
+        "half_life_days": null
+      },
+      "tune": {
+        "days": 139,
+        "hit": 0.49640287769784175,
+        "traded_days": 113,
+        "traded_hit": 0.5132743362831859,
+        "return_pct": -7.936446557758304,
+        "sharpe": -2.8260229356532616,
+        "max_dd": 7.936446557758304,
+        "momentum_hit": 0.5035971223021583,
+        "always_up": 0.48201438848920863,
+        "up_predictions": 71,
+        "retrains": 10,
+        "mean_train_rows": 4320.0,
+        "mean_effective_rows": 4320.0,
+        "runtime_s": 42.4
+      },
+      "validation": {
+        "days": 138,
+        "hit": 0.45652173913043476,
+        "traded_days": 116,
+        "traded_hit": 0.46551724137931033,
+        "return_pct": -4.891549334505396,
+        "sharpe": -1.6838573487038673,
+        "max_dd": 5.082670686132939,
+        "momentum_hit": 0.5507246376811594,
+        "always_up": 0.45652173913043476,
+        "up_predictions": 58,
+        "retrains": 10,
+        "mean_train_rows": 4320.0,
+        "mean_effective_rows": 4320.0,
+        "runtime_s": 30.3
+      }
+    },
+    "rolling_365d": {
+      "spec": {
+        "label": "rolling_365d",
+        "window_days": 365,
+        "half_life_days": null
+      },
+      "tune": {
+        "days": 139,
+        "hit": 0.4892086330935252,
+        "traded_days": 99,
+        "traded_hit": 0.48484848484848486,
+        "return_pct": -3.8819456814367936,
+        "sharpe": -1.3905469270356678,
+        "max_dd": 6.082927181292231,
+        "momentum_hit": 0.5035971223021583,
+        "always_up": 0.48201438848920863,
+        "up_predictions": 82,
+        "retrains": 10,
+        "mean_train_rows": 8642.7,
+        "mean_effective_rows": 8642.7,
+        "runtime_s": 126.6
+      },
+      "validation": {
+        "days": 138,
+        "hit": 0.4492753623188406,
+        "traded_days": 103,
+        "traded_hit": 0.4563106796116505,
+        "return_pct": -3.335607001187013,
+        "sharpe": -1.1752140083296863,
+        "max_dd": 4.9449180892812805,
+        "momentum_hit": 0.5507246376811594,
+        "always_up": 0.45652173913043476,
+        "up_predictions": 65,
+        "retrains": 10,
+        "mean_train_rows": 8760.0,
+        "mean_effective_rows": 8760.0,
+        "runtime_s": 36.3
+      }
+    },
+    "decay_hl60d": {
+      "spec": {
+        "label": "decay_hl60d",
+        "window_days": null,
+        "half_life_days": 60.0
+      },
+      "tune": {
+        "days": 139,
+        "hit": 0.4892086330935252,
+        "traded_days": 93,
+        "traded_hit": 0.46236559139784944,
+        "return_pct": -6.105148877972455,
+        "sharpe": -2.4258203569051098,
+        "max_dd": 6.936576333056221,
+        "momentum_hit": 0.5035971223021583,
+        "always_up": 0.48201438848920863,
+        "up_predictions": 58,
+        "retrains": 10,
+        "mean_train_rows": 9545.0,
+        "mean_effective_rows": 4062.8609147184056,
+        "runtime_s": 36.0
+      },
+      "validation": {
+        "days": 138,
+        "hit": 0.4855072463768116,
+        "traded_days": 104,
+        "traded_hit": 0.4423076923076923,
+        "return_pct": -4.48523780860689,
+        "sharpe": -1.6328673299964134,
+        "max_dd": 5.801210672291191,
+        "momentum_hit": 0.5507246376811594,
+        "always_up": 0.45652173913043476,
+        "up_predictions": 62,
+        "retrains": 10,
+        "mean_train_rows": 12857.0,
+        "mean_effective_rows": 4136.05855371028,
+        "runtime_s": 37.6
+      }
+    },
+    "decay_hl180d": {
+      "spec": {
+        "label": "decay_hl180d",
+        "window_days": null,
+        "half_life_days": 180.0
+      },
+      "tune": {
+        "days": 139,
+        "hit": 0.48201438848920863,
+        "traded_days": 95,
+        "traded_hit": 0.4631578947368421,
+        "return_pct": -6.644914553633585,
+        "sharpe": -2.38529839216375,
+        "max_dd": 9.74614081164824,
+        "momentum_hit": 0.5035971223021583,
+        "always_up": 0.48201438848920863,
+        "up_predictions": 75,
+        "retrains": 10,
+        "mean_train_rows": 9545.0,
+        "mean_effective_rows": 8004.940834706203,
+        "runtime_s": 31.9
+      },
+      "validation": {
+        "days": 138,
+        "hit": 0.5072463768115942,
+        "traded_days": 94,
+        "traded_hit": 0.425531914893617,
+        "return_pct": -4.176442550073611,
+        "sharpe": -1.6849727356619746,
+        "max_dd": 4.39107709956954,
+        "momentum_hit": 0.5507246376811594,
+        "always_up": 0.45652173913043476,
+        "up_predictions": 67,
+        "retrains": 10,
+        "mean_train_rows": 12857.0,
+        "mean_effective_rows": 9630.81595063124,
+        "runtime_s": 34.4
+      }
+    }
+  },
+  "summary": {
+    "tune_ranking": [
+      "baseline_expanding",
+      "rolling_90d",
+      "rolling_180d",
+      "rolling_365d",
+      "decay_hl60d",
+      "decay_hl180d"
+    ],
+    "best_on_tune": "baseline_expanding",
+    "best_on_tune_validation_hit": 0.47101449275362317,
+    "baseline_validation_hit": 0.47101449275362317,
+    "runtime_s": 599.4,
+    "eval_window": {
+      "start_days_ago": 365,
+      "mid_days_ago": 227,
+      "end_days_ago": 90
+    },
+    "data_range": [
+      "2024-09-13 07:00:00+00:00",
+      "2026-09-13 06:00:00+00:00"
+    ],
+    "config": {
+      "eval_start_days_ago": 365,
+      "eval_end_days_ago": 90,
+      "horizon_bars": 24,
+      "retrain_every_days": 14,
+      "min_train_rows": 1000,
+      "threshold": 0.55,
+      "atr_multiplier": 1.5,
+      "take_profit_rr": 2.0,
+      "risk_per_trade_pct": 0.01,
+      "initial_equity": 10000.0,
+      "fee_pct": 0.0004,
+      "slippage_pct": 0.0002,
+      "xgb_params": {
+        "n_estimators": 80,
+        "max_depth": 4,
+        "learning_rate": 0.05,
+        "n_jobs": 2
+      },
+      "lgbm_params": {
+        "n_estimators": 80,
+        "num_leaves": 15,
+        "learning_rate": 0.05,
+        "n_jobs": 2
+      },
+      "reg_params": {
+        "n_estimators": 80,
+        "num_leaves": 15,
+        "learning_rate": 0.03,
+        "subsample": 0.8,
+        "subsample_freq": 1,
+        "colsample_bytree": 0.8,
+        "min_child_samples": 30,
+        "reg_lambda": 2.0,
+        "verbose": -1,
+        "n_jobs": 2,
+        "random_state": 42
+      },
+      "regime_weights": {},
+      "skip_regimes": [],
+      "feature_set": "extended",
+      "model": "ensemble",
+      "logreg_c": 0.05,
+      "label": "idea06"
+    }
+  }
+}
