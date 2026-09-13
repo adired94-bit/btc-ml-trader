@@ -10,3 +10,6 @@ models/*.json
 logs/*.log*
 .pytest_cache/
 logs/*.err
+.claude/worktrees/
+data/ETH_USDT_1h.csv
+data/SOL_USDT_1h.csv
