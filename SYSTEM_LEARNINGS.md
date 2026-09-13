@@ -441,3 +441,27 @@ Predict whether the next 24 h |return| exceeds the trailing 90-day median ("big 
 
 * Big-day share 50.6%; exits on validation {'CLOSE': 19, 'STOP': 16, 'TAKE_PROFIT': 12}, days with no breakout 9.
 * Runtime 258s.
+
+## 2026-09-13 07:37 UTC — Breakout execution sweep on fixed volatility predictions (6-year data)
+
+Model trained once per half (retrain every 21 d); 100 execution configs (threshold x breakout k x R:R, rr=0 = hold to close) scored on the tune half, top-5 re-scored on validation.
+
+| Rank | Thr | k (ATR) | R:R | Tune trades / win / return / Sharpe / DD | Validation trades / win / return / Sharpe / DD |
+|---|---|---|---|---|---|
+| 1 | 0.60 | 1.00 | 1.0 | 49 / 57% / +5.0% / 0.85 / 5.0% | 44 / 30% / -6.4% / -1.26 / 8.3% |
+| 2 | 0.60 | 1.50 | 1.5 | 23 / 52% / +3.1% / 0.80 / 1.6% | 15 / 53% / +0.8% / 0.30 / 1.7% |
+| 3 | 0.60 | 1.00 | 3.0 | 49 / 51% / +4.1% / 0.56 / 5.3% | 44 / 30% / -4.3% / -0.67 / 6.4% |
+| 4 | 0.60 | 1.50 | 1.0 | 23 / 52% / +1.8% / 0.55 / 1.6% | 15 / 53% / +0.4% / 0.18 / 1.7% |
+| 5 | 0.60 | 1.50 | 2.0 | 23 / 52% / +2.0% / 0.54 / 1.6% | 15 / 53% / +1.3% / 0.42 / 1.7% |
+
+* Validation grid overall: 51% of configs profitable, median return +0.08%; best possible on validation (hindsight) Sharpe 1.15.
+* Runtime 80s.
+**Conclusion of the volatility line (2026-09-13).** The *prediction* is real and stable — big-day
+accuracy 60 % vs 49 % naive persistence, AUC 0.61 tune / 0.57 validation — but the OCO breakout
+does not monetise it robustly: tight breakouts (k ≤ 1 ATR) lose on false breaks, wide ones
+(k = 1.5) are +1–3 % per half on only 15–23 trades, and across the whole validation grid the
+median return is +0.08 %. A big day is not the same as a clean directional break; many big days
+reverse intraday. Next ways to use the volatility signal: (1) as a *risk* input — skip or halve
+size on predicted big days for the direction model, widen stops on them; (2) intraday breakout
+with time-of-day entry windows (Asia/US open) instead of a full-day OCO; (3) options-style
+payoffs are not available on spot, so the straddle analogue is out.

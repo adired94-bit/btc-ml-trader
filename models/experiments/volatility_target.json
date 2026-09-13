@@ -1,0 +1,143 @@
+{
+  "tune_thr0.5": {
+    "days": 506,
+    "big_day_share": 0.5217391304347826,
+    "accuracy": 0.5988142292490118,
+    "auc": 0.6052153769095918,
+    "naive_persistence_accuracy": 0.4881422924901186,
+    "precision_big": 0.5993485342019544,
+    "predicted_big_days": 307,
+    "trades": 250,
+    "win_rate": 0.388,
+    "total_return_pct": -22.46416494719775,
+    "sharpe": -1.2730087945291824,
+    "max_drawdown_pct": 29.7134002289147,
+    "exit_reasons": {
+      "CLOSE": 126,
+      "STOP": 92,
+      "TAKE_PROFIT": 32
+    },
+    "no_breakout_days": 57
+  },
+  "tune_thr0.55": {
+    "days": 506,
+    "big_day_share": 0.5217391304347826,
+    "accuracy": 0.5770750988142292,
+    "auc": 0.6052153769095918,
+    "naive_persistence_accuracy": 0.4881422924901186,
+    "precision_big": 0.6086956521739131,
+    "predicted_big_days": 230,
+    "trades": 192,
+    "win_rate": 0.3802083333333333,
+    "total_return_pct": -20.93590176133987,
+    "sharpe": -1.3457809930950417,
+    "max_drawdown_pct": 29.139666587844093,
+    "exit_reasons": {
+      "CLOSE": 95,
+      "STOP": 73,
+      "TAKE_PROFIT": 24
+    },
+    "no_breakout_days": 38
+  },
+  "tune_thr0.6": {
+    "days": 506,
+    "big_day_share": 0.5217391304347826,
+    "accuracy": 0.5335968379446641,
+    "auc": 0.6052153769095918,
+    "naive_persistence_accuracy": 0.4881422924901186,
+    "precision_big": 0.6,
+    "predicted_big_days": 140,
+    "trades": 120,
+    "win_rate": 0.3416666666666667,
+    "total_return_pct": -20.71421991309954,
+    "sharpe": -1.7013145514991137,
+    "max_drawdown_pct": 24.683916680555416,
+    "exit_reasons": {
+      "CLOSE": 55,
+      "STOP": 51,
+      "TAKE_PROFIT": 14
+    },
+    "no_breakout_days": 20
+  },
+  "tune_thr0.65": {
+    "days": 506,
+    "big_day_share": 0.5217391304347826,
+    "accuracy": 0.5158102766798419,
+    "auc": 0.6052153769095918,
+    "naive_persistence_accuracy": 0.4881422924901186,
+    "precision_big": 0.6233766233766234,
+    "predicted_big_days": 77,
+    "trades": 68,
+    "win_rate": 0.36764705882352944,
+    "total_return_pct": -8.799425542449612,
+    "sharpe": -0.8080776385623586,
+    "max_drawdown_pct": 14.597982712108436,
+    "exit_reasons": {
+      "STOP": 31,
+      "CLOSE": 26,
+      "TAKE_PROFIT": 11
+    },
+    "no_breakout_days": 9
+  },
+  "tune_breakout_every_day": {
+    "days": 506,
+    "big_day_share": 0.5217391304347826,
+    "accuracy": 0.5217391304347826,
+    "auc": 0.6052153769095918,
+    "naive_persistence_accuracy": 0.4881422924901186,
+    "precision_big": 0.5217391304347826,
+    "predicted_big_days": 506,
+    "trades": 355,
+    "win_rate": 0.38873239436619716,
+    "total_return_pct": -26.47604026228787,
+    "sharpe": -1.3294484858162952,
+    "max_drawdown_pct": 34.278896193284034,
+    "exit_reasons": {
+      "CLOSE": 194,
+      "STOP": 120,
+      "TAKE_PROFIT": 41
+    },
+    "no_breakout_days": 151
+  },
+  "validation_best": {
+    "threshold": 0.65,
+    "days": 506,
+    "big_day_share": 0.5059288537549407,
+    "accuracy": 0.5335968379446641,
+    "auc": 0.5708906250000001,
+    "naive_persistence_accuracy": 0.525691699604743,
+    "precision_big": 0.6785714285714286,
+    "predicted_big_days": 56,
+    "trades": 47,
+    "win_rate": 0.425531914893617,
+    "total_return_pct": 7.298179213494271,
+    "sharpe": 0.7681069780923395,
+    "max_drawdown_pct": 6.256618498759825,
+    "exit_reasons": {
+      "CLOSE": 19,
+      "STOP": 16,
+      "TAKE_PROFIT": 12
+    },
+    "no_breakout_days": 9
+  },
+  "validation_breakout_every_day": {
+    "days": 506,
+    "big_day_share": 0.5059288537549407,
+    "accuracy": 0.5059288537549407,
+    "auc": 0.5708906250000001,
+    "naive_persistence_accuracy": 0.525691699604743,
+    "precision_big": 0.5059288537549407,
+    "predicted_big_days": 506,
+    "trades": 340,
+    "win_rate": 0.38529411764705884,
+    "total_return_pct": -26.759606937131654,
+    "sharpe": -1.4215019823309762,
+    "max_drawdown_pct": 29.474892011997966,
+    "exit_reasons": {
+      "CLOSE": 194,
+      "STOP": 109,
+      "TAKE_PROFIT": 37
+    },
+    "no_breakout_days": 166
+  }
+}
