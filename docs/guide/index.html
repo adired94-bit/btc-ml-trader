@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מדריך BTC Signals</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>html,body{margin:0}</style>
+</head>
+<body>
+<style>
+:root{
+  --bg:#0B1220; --panel:#141C2B; --panel2:#1B2536; --line:#26334A; --line2:#33425C;
+  --text:#E6EDF7; --muted:#8494AC; --dim:#5C6B85;
+  --long:#35C98D; --short:#E5615E; --wait:#E8A33D; --blue:#4EA8DE; --gold:#F5C542; --violet:#C77DFF;
+  --mono:'JetBrains Mono',Consolas,monospace; --sans:'Heebo',system-ui,-apple-system,'Segoe UI',Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{color-scheme:dark}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);direction:rtl;line-height:1.55;min-height:100vh;font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--wait);outline-offset:2px}
+.num,.ltr{direction:ltr;unicode-bidi:isolate;font-family:var(--mono)}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 20px 60px}
+header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:18px}
+header.top h1{font-size:clamp(24px,3.2vw,36px);font-weight:900;letter-spacing:-.01em;text-wrap:balance}
+header.top h1 span{color:var(--gold)}
+header.top p{color:var(--muted);max-width:60ch}
+.eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);font-family:var(--mono);margin-bottom:6px}
+
+.player{display:grid;grid-template-columns:1fr 250px;gap:18px;align-items:start}
+@media (max-width:900px){.player{grid-template-columns:1fr}}
+.screen{background:#070C16;border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+.stage{position:relative;aspect-ratio:16/9;background:var(--bg);overflow:hidden}
+.scene{position:absolute;inset:0;padding:clamp(12px,2.6vw,28px) clamp(14px,3vw,34px);opacity:0;transition:opacity .45s ease;pointer-events:none}
+.scene.on{opacity:1;pointer-events:auto}
+@media (prefers-reduced-motion:reduce){.scene{transition:none}.pulse,.cursor{animation:none!important}}
+.caption{padding:16px 22px 14px;border-top:1px solid var(--line);min-height:96px;display:flex;flex-direction:column;gap:4px}
+.caption .k{font-size:12px;color:var(--muted);font-family:var(--mono);letter-spacing:.06em}
+.caption .t{font-size:17px;font-weight:500;text-wrap:pretty;max-width:70ch}
+.controls{display:flex;align-items:center;gap:10px;padding:10px 14px 14px;flex-wrap:wrap}
+.btn{border:1px solid var(--line2);background:var(--panel);border-radius:9px;padding:7px 13px;font-weight:500;font-size:14px;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{background:var(--panel2)}
+.btn.primary{background:var(--gold);color:#1a1200;border-color:var(--gold);font-weight:700;min-width:96px;justify-content:center}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn[aria-pressed="true"]{border-color:var(--blue);color:var(--blue)}
+.prog{flex:1;min-width:140px;height:6px;background:var(--line);border-radius:3px;position:relative;cursor:pointer}
+.prog>i{position:absolute;inset:0 auto 0 0;background:var(--gold);border-radius:3px;width:0}
+.prog>i{right:0;left:auto}
+.time{font-family:var(--mono);font-size:12px;color:var(--muted);min-width:70px;text-align:center}
+.rail{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.rail h2{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-family:var(--mono);padding:12px 14px;border-bottom:1px solid var(--line)}
+.rail ol{list-style:none}
+.rail li button{width:100%;text-align:right;display:flex;gap:10px;align-items:baseline;padding:9px 14px;border-bottom:1px solid var(--line);font-size:13.5px}
+.rail li button:hover{background:var(--panel2)}
+.rail li button .n{font-family:var(--mono);color:var(--dim);font-size:11px;min-width:20px}
+.rail li.cur button{background:var(--panel2);color:var(--gold)}
+.rail li.cur button .n{color:var(--gold)}
+.rail .d{font-family:var(--mono);color:var(--dim);font-size:11px;margin-right:auto}
+
+/* ---- scene primitives ---- */
+.h{font-size:clamp(15px,2.4vw,22px);font-weight:900;margin-bottom:6px;text-wrap:balance}
+.h small{display:block;font-size:13px;font-weight:400;color:var(--muted);margin-top:2px}
+.mock{position:absolute;inset:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.spot{position:absolute;border:2px solid var(--gold);border-radius:10px;box-shadow:0 0 0 9999px rgba(7,12,22,.55);pointer-events:none;transition:all .5s ease}
+.pulse{animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 9999px rgba(7,12,22,.55),0 0 0 0 rgba(245,197,66,.55)}50%{box-shadow:0 0 0 9999px rgba(7,12,22,.55),0 0 0 10px rgba(245,197,66,0)}}
+.tag{position:absolute;background:var(--gold);color:#1a1200;font-weight:700;font-size:clamp(9px,1.2vw,12.5px);padding:4px 9px;border-radius:6px;white-space:nowrap}
+.tag:after{content:"";position:absolute;top:100%;right:14px;border:6px solid transparent;border-top-color:var(--gold)}
+
+/* dashboard mock */
+.dash{position:absolute;inset:14px clamp(14px,3vw,34px);background:#0E1420;border:1px solid var(--line);border-radius:10px;display:grid;grid-template-columns:150px 1fr;overflow:hidden;font-size:9.5px}
+.dash .side{background:#161E2D;border-left:1px solid var(--line);padding:10px 9px;display:flex;flex-direction:column;gap:7px}
+.dash .side b{font-size:11px;display:block;margin-bottom:2px}
+.dash .side .lab{color:var(--muted);font-size:8.5px}
+.dash .side .sl{height:3px;background:var(--line);border-radius:2px;position:relative;margin:5px 0 4px}
+.dash .side .sl i{position:absolute;right:0;top:0;bottom:0;background:var(--short);border-radius:2px}
+.dash .side .sl b{position:absolute;top:-3.5px;width:10px;height:10px;border-radius:50%;background:var(--short);margin:0}
+.dash .side .inp{border:1px solid var(--line);background:#0E1420;border-radius:5px;padding:4px 6px;font-family:var(--mono);font-size:8.5px}
+.dash .main{padding:10px 14px;display:flex;flex-direction:column;gap:7px}
+.dash .title{font-size:15px;font-weight:900}
+.dash .kpis{display:grid;grid-template-columns:repeat(4,1fr) 1.5fr;gap:8px;align-items:stretch}
+.dash .kpi .l{color:var(--muted);font-size:8px}
+.dash .kpi .v{font-size:15px;font-weight:700;font-family:var(--mono)}
+.dash .kpi .c{font-size:8px;padding:1px 5px;border-radius:8px;display:inline-block;margin-top:2px}
+.dash .sig{border:2px solid var(--wait);border-radius:8px;text-align:center;padding:4px 6px;display:flex;flex-direction:column;justify-content:center}
+.dash .sig .s{font-size:7.5px;color:var(--muted);font-family:var(--mono)}
+.dash .sig .a{font-size:17px;font-weight:900;color:var(--wait);line-height:1.15}
+.dash .sig .cf{font-size:8px}
+.dash .sig.long{border-color:var(--long)}.dash .sig.long .a{color:var(--long)}
+.dash .sig.short{border-color:var(--short)}.dash .sig.short .a{color:var(--short)}
+.dash .tabs{display:flex;gap:12px;font-size:9px;color:var(--muted);border-bottom:1px solid var(--line);padding-bottom:4px}
+.dash .tabs span{display:flex;align-items:center;gap:4px}
+.dash .tabs span:before{content:"";width:7px;height:7px;border-radius:50%;border:1px solid var(--muted)}
+.dash .tabs span.on{color:var(--text)}.dash .tabs span.on:before{border-color:var(--short);background:var(--short);box-shadow:inset 0 0 0 1.5px #0E1420}
+.dash .body{flex:1;display:grid;gap:8px;min-height:0}
+.dash canvas{width:100%;height:100%;display:block}
+.dash .chartbox{display:grid;grid-template-columns:1fr 60px;gap:6px;min-height:0}
+.dash .vp{display:flex;flex-direction:column-reverse;gap:1.5px;justify-content:center}
+.dash .vp i{display:block;height:4px;background:rgba(78,168,222,.6);border-radius:1px}
+.dash .vp i.poc{background:var(--gold)}
+.dash .grid2{display:grid;grid-template-columns:1fr 1.2fr;gap:10px}
+.dash .sub{font-size:11px;font-weight:700;margin-bottom:3px}
+.dash .bars{display:flex;align-items:flex-end;gap:6px;height:64px;border-bottom:1px solid var(--line);padding:0 6px;position:relative}
+.dash .bars .g{flex:1;display:flex;gap:2px;align-items:flex-end;height:100%}
+.dash .bars .g i{flex:1;border-radius:2px 2px 0 0}
+.dash .bars .thr{position:absolute;left:0;right:0;border-top:1px dashed var(--wait);top:45%}
+.dash .bl{display:flex;justify-content:space-around;font-size:8px;color:var(--muted)}
+.dash .plan{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.dash .plan .kpi .v{font-size:11px}
+.dash table{width:100%;border-collapse:collapse;font-size:8px}
+.dash th{color:var(--muted);font-weight:400;text-align:right;padding:2px 4px;border-bottom:1px solid var(--line)}
+.dash td{padding:2px 4px;border-bottom:1px solid rgba(38,51,74,.6);font-family:var(--mono)}
+.dash .info{background:rgba(78,168,222,.12);border:1px solid rgba(78,168,222,.35);border-radius:6px;padding:6px 8px;font-size:8.5px}
+.dash .btnm{background:var(--short);color:#fff;border-radius:5px;padding:4px 9px;font-size:8.5px;display:inline-block;font-weight:700}
+.dash .stat6{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.dash .stat6 .v{font-size:13px}
+
+/* terminal */
+.term{position:absolute;right:34px;left:34px;top:88px;bottom:40px;background:#05080F;border:1px solid var(--line);border-radius:10px;padding:14px 16px;font-family:var(--mono);font-size:clamp(8.5px,1.45vw,13px);overflow:auto;direction:ltr;text-align:left;color:#cfe3ff;overflow:hidden}
+.term .bar{display:flex;gap:6px;margin-bottom:10px}.term .bar i{width:10px;height:10px;border-radius:50%;background:var(--line2)}
+.term .ln{white-space:pre;opacity:0;animation:show .01s forwards}
+.term .ln.p{color:#8fd3a8}.term .ln.m{color:var(--muted)}.term .ln.ok{color:var(--long)}
+@keyframes show{to{opacity:1}}
+.cursor{display:inline-block;width:8px;height:14px;background:#cfe3ff;vertical-align:-2px;animation:blink 1s steps(2) infinite}
+@keyframes blink{to{visibility:hidden}}
+
+/* flow diagram */
+.flow{position:absolute;inset:86px 34px 40px;display:grid;grid-template-columns:repeat(5,1fr);gap:10px;align-items:center}
+.flow .node{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 10px;text-align:center;position:relative}
+.flow .node b{display:block;font-size:clamp(10px,1.4vw,14px);margin-bottom:3px}
+.flow .node small{color:var(--muted);font-size:clamp(8px,1.1vw,11.5px);display:block;line-height:1.4}
+.flow .node:not(:last-child):after{content:"◀";position:absolute;left:-13px;top:50%;transform:translateY(-50%);color:var(--gold);font-size:12px}
+.flow .node.hot{border-color:var(--gold)}
+
+/* signal states */
+.states{position:absolute;inset:90px 34px 34px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.st{border:2px solid var(--line);border-radius:12px;padding:16px 16px 14px;background:var(--panel);display:flex;flex-direction:column;gap:8px}
+.st .a{font-size:clamp(18px,3vw,30px);font-weight:900;letter-spacing:.02em}
+.st p{font-size:clamp(9.5px,1.3vw,13.5px);color:var(--text)}
+.st small{color:var(--muted);font-size:12px;margin-top:auto}
+.st.w{border-color:var(--wait)}.st.w .a{color:var(--wait)}
+.st.l{border-color:var(--long)}.st.l .a{color:var(--long)}
+.st.s{border-color:var(--short)}.st.s .a{color:var(--short)}
+
+/* results */
+.res{position:absolute;inset:86px 34px 30px;display:grid;grid-template-columns:1.1fr 1fr;gap:18px}
+.res table{width:100%;border-collapse:collapse;font-size:13px}
+.res th{text-align:right;color:var(--muted);font-weight:400;padding:6px 8px;border-bottom:1px solid var(--line);font-size:11.5px}
+.res td{padding:7px 8px;border-bottom:1px solid var(--line)}
+.res td.n{font-family:var(--mono);direction:ltr;text-align:left}
+.res .bad{color:var(--short)}.res .ok{color:var(--long)}.res .mid{color:var(--wait)}
+.res .note{background:rgba(229,97,94,.1);border:1px solid rgba(229,97,94,.4);border-radius:10px;padding:14px 16px;font-size:14px;display:flex;flex-direction:column;gap:8px}
+.res .note b{color:var(--short);font-size:16px}
+.res .note li{margin-right:16px;font-size:13px}
+
+/* routine list */
+.steps{position:absolute;inset:86px 34px 30px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.steps ol{list-style:none;display:flex;flex-direction:column;gap:8px;counter-reset:s}
+.steps li{counter-increment:s;display:flex;gap:12px;align-items:flex-start;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:clamp(5px,1vw,10px) 12px;font-size:clamp(9.5px,1.3vw,13.5px)}
+.steps li:before{content:counter(s);font-family:var(--mono);color:var(--gold);font-weight:600;min-width:18px}
+.steps .box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:clamp(9.5px,1.3vw,13px);overflow:auto;display:flex;flex-direction:column;gap:8px}
+.steps .box b{font-size:14px}
+.cmd{background:#05080F;border:1px solid var(--line);border-radius:7px;padding:8px 10px;font-family:var(--mono);font-size:12.5px;direction:ltr;text-align:left;color:#cfe3ff}
+
+.voice{font-size:12px;color:var(--muted);padding:0 14px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.voice select{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:3px 6px;font:inherit;font-size:12px}
+.faq{margin-top:34px;display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media (max-width:900px){.faq{grid-template-columns:1fr}}
+.faq section{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.faq h3{font-size:16px;font-weight:700;margin-bottom:8px}
+.faq p,.faq li{font-size:14px;color:var(--text)}
+.faq ul{margin-right:18px;display:flex;flex-direction:column;gap:5px}
+.faq .k{color:var(--muted)}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">BTC/USDT · 1h · ML SIGNALS</div>
+      <h1>מדריך וידאו: <span>איך עובדים עם תוכנת החיזוי</span></h1>
+      <p>נגן אינטראקטיבי ב-11 פרקים. לוחצים ▶ והמדריך מתקדם לבד עם כתוביות וקריינות (אם בדפדפן מותקן קול עברי). אפשר לדלג בין הפרקים ברשימה.</p>
+    </div>
+  </header>
+
+  <div class="player">
+    <div class="screen" id="screen">
+      <div class="stage" id="stage"></div>
+      <div class="caption"><div class="k" id="capK">פרק 1 / 11</div><div class="t" id="capT"></div></div>
+      <div class="controls">
+        <button class="btn primary" id="play" aria-label="נגן">▶ נגן</button>
+        <button class="btn" id="prev" aria-label="פרק קודם">⏮ קודם</button>
+        <button class="btn" id="next" aria-label="פרק הבא">הבא ⏭</button>
+        <div class="prog" id="prog" role="slider" aria-label="התקדמות" tabindex="0"><i id="fill"></i></div>
+        <div class="time" id="time">0:00 / 0:00</div>
+        <button class="btn" id="voice" aria-pressed="true">🔊 קריינות</button>
+      </div>
+      <div class="voice" id="voiceRow"><span>קול:</span><select id="voices"><option>טוען קולות…</option></select><span id="voiceNote"></span></div>
+    </div>
+    <nav class="rail" aria-label="פרקים"><h2>פרקים</h2><ol id="chapters"></ol></nav>
+  </div>
+
+  <div class="faq">
+    <section>
+      <h3>האם נעשו מבחני חיזוי אמיתיים, ומה אחוזי ההצלחה?</h3>
+      <p>כן. שלוש בדיקות נפרדות על נתונים היסטוריים שהמודל <b>לא ראה באימון</b>:</p>
+      <ul>
+        <li><span class="k">חיזוי יומי (276 ימים, שנה אחורה עד 3 חודשים אחורה):</span> דיוק כיווני <b>48.2%</b>. אחרי לולאת השיפור העצמי: <b>50.5%</b> על ימי המסחר. הטעיה בין המחיר החזוי למחיר בפועל: <b>1.85%</b> בממוצע, גרוע במעט מניחוש "מחר כמו היום" (1.71%).</li>
+        <li><span class="k">מודל 4 שעות, 3 מחלקות (עלייה / דשדוש / ירידה):</span> דיוק <b>38.1%</b> מול 33.3% אקראי.</li>
+        <li><span class="k">סימולציית מסחר על 470 עסקאות:</span> אחוז הצלחה <b>36%</b>, תשואה <b>-43.7%</b>, Sharpe -1.66.</li>
+      </ul>
+    </section>
+    <section>
+      <h3>המשמעות</h3>
+      <p>התוכנה עובדת טכנית מקצה לקצה, אבל <b>כרגע אין לה יתרון חיזוי אמיתי</b>: על חיזוי יומי היא ברמה של הטלת מטבע, ובסימולציית מסחר היא מפסידה. זו התוצאה הצפויה ממודל ML על נרות שעתיים של ביטקוין ללא מקורות מידע נוספים, ואני מדווח אותה כפי שהיא.</p>
+      <p style="margin-top:8px">מה כן: המערכת מודדת את עצמה בכנות, מתעדת כל ניסיון ב-SYSTEM_LEARNINGS.md, ויש לה לולאת שיפור אוטומטית. <b>אל תסחרו בכסף אמיתי לפי האיתותים בשלב זה.</b></p>
+    </section>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+const $=s=>document.querySelector(s);
+const stage=$('#stage');
+
+/* ---------- helpers to build the dashboard mock ---------- */
+function dash(opts){
+  const o=Object.assign({view:'chart',signal:'wait',spot:null,tag:null,price:'77,191.73',chg:'+0.03%'},opts);
+  const sigCls=o.signal==='long'?'long':o.signal==='short'?'short':'';
+  const sigTxt=o.signal==='long'?'LONG':o.signal==='short'?'SHORT':'WAIT';
+  const conf=o.signal==='long'?'ביטחון 61% · סף 55%':o.signal==='short'?'ביטחון 58% · סף 55%':'ביטחון 38% · סף 55%';
+  const tabs=['chart','signal','backtest','model'];const names={chart:'📈 Chart',signal:'🎯 Signal & risk',backtest:'🧪 Backtest',model:'🧠 Model'};
+  let body='';
+  if(o.view==='chart'){
+    body=`<div class="chartbox"><canvas class="cv" data-kind="candles"></canvas><div class="vp">${Array.from({length:22},(_,i)=>`<i style="width:${[20,30,45,60,80,100,90,70,55,40,35,30,28,25,20,18,15,12,10,8,6,5][i]}%" class="${i===5?'poc':''}"></i>`).join('')}</div></div><div class="stat6"><div class="kpi"><div class="l">RSI 14</div><div class="v">41.98</div></div><div class="kpi"><div class="l">ATR 14</div><div class="v">212 (0.28%)</div></div><div class="kpi"><div class="l">EMA 20 / 50</div><div class="v">77,304 / 77,453</div></div><div class="kpi"><div class="l">EMA 200</div><div class="v">78,181</div></div><div class="kpi"><div class="l">VWAP (day)</div><div class="v">77,280</div></div><div class="kpi"><div class="l">POC (240h)</div><div class="v">79,173</div></div></div>`;
+  }else if(o.view==='signal'){
+    const L=o.signal==='long';
+    const probs=L?[[0.12,0.13,0.11],[0.27,0.24,0.31],[0.61,0.63,0.58]]:[[0.13,0.14,0.13],[0.49,0.54,0.44],[0.38,0.32,0.43]];
+    const cols=['var(--blue)','var(--short)','var(--long)'];
+    const bars=probs.map(g=>`<div class="g">${g.map((v,i)=>`<i style="height:${v*100}%;background:${cols[i]}"></i>`).join('')}</div>`).join('');
+    const plan=L?`<div class="plan"><div class="kpi"><div class="l">Entry</div><div class="v">77,191.73</div></div><div class="kpi"><div class="l">Stop-loss</div><div class="v" style="color:var(--short)">76,873.50</div></div><div class="kpi"><div class="l">Position</div><div class="v">0.3142 BTC</div></div><div class="kpi"><div class="l">Risk amount</div><div class="v">100.00 USDT</div></div><div class="kpi"><div class="l">Leverage</div><div class="v">2.43x</div></div><div class="kpi"><div class="l">ATR used</div><div class="v">212</div></div></div><table><tr><th>R:R</th><th>Take-profit</th><th>מרחק</th><th>רווח ביעד</th></tr><tr><td>1:2</td><td style="color:var(--long)">77,828.19</td><td>0.82%</td><td>200.00</td></tr><tr><td>1:3</td><td style="color:var(--long)">78,146.42</td><td>1.24%</td><td>300.00</td></tr></table>`
+      :`<div class="info">No trade: the model is not confident enough. Waiting for the next candle.</div><div class="sub" style="margin-top:6px">Key indicators</div><table><tr><th>indicator</th><th>value</th></tr><tr><td>close</td><td>77114.99</td></tr><tr><td>ema_20</td><td>77303.707</td></tr><tr><td>rsi_14</td><td>41.9849</td></tr><tr><td>atr_14</td><td>212.3463</td></tr></table>`;
+    body=`<div class="grid2"><div><div class="sub">Direction probabilities</div><div class="bars"><div class="thr"></div>${bars}</div><div class="bl"><span>DOWN</span><span>FLAT</span><span>UP</span></div><div style="font-size:8.5px;color:var(--muted);margin-top:4px">${L?'P(up)=0.61 ≥ 0.55':'No side reaches the 0.55 threshold (up=0.38, down=0.13)'}</div><div style="font-size:8.5px;margin-top:2px">טווח צפוי ל-4 השעות הבאות: <b>76,840</b> ← <b>77,331</b></div></div><div><div class="sub">Trade plan</div>${plan}</div></div>`;
+  }else if(o.view==='backtest'){
+    body=`<div class="sub">Walk-forward backtest (out-of-sample)</div><div class="grid2" style="grid-template-columns:.7fr 2fr"><div style="display:flex;flex-direction:column;gap:5px"><div class="lab" style="color:var(--muted);font-size:8px">Mode</div><div class="inp" style="border:1px solid var(--line);border-radius:5px;padding:3px 6px;font-size:8.5px">walk_forward</div><div class="lab" style="color:var(--muted);font-size:8px">Take-profit R:R</div><div class="inp" style="border:1px solid var(--line);border-radius:5px;padding:3px 6px;font-size:8.5px">2.0</div><div class="btnm">Run backtest</div></div><div><div class="stat6"><div class="kpi"><div class="l">Trades</div><div class="v">470</div></div><div class="kpi"><div class="l">Win rate</div><div class="v">36.0%</div></div><div class="kpi"><div class="l">Sharpe</div><div class="v" style="color:var(--short)">-1.66</div></div><div class="kpi"><div class="l">Max drawdown</div><div class="v" style="color:var(--short)">49.7%</div></div><div class="kpi"><div class="l">Return</div><div class="v" style="color:var(--short)">-43.7%</div></div><div class="kpi"><div class="l">Profit factor</div><div class="v">0.83</div></div></div><div style="height:78px;margin-top:6px"><canvas class="cv" data-kind="equity"></canvas></div></div></div>`;
+  }else{
+    body=`<div class="grid2"><div><div class="sub">Training status</div><div style="font-size:8.5px">Trained: <b>True</b> · running: <b>False</b></div><div style="font-size:8.5px;color:var(--muted)">Out-of-sample test period: 2026-04-21 → 2026-09-12</div><div class="stat6" style="grid-template-columns:repeat(4,1fr);margin-top:5px"><div class="kpi"><div class="l">Accuracy</div><div class="v">0.381</div></div><div class="kpi"><div class="l">Balanced acc.</div><div class="v">0.394</div></div><div class="kpi"><div class="l">Log-loss</div><div class="v">1.0887</div></div><div class="kpi"><div class="l">Signal acc.</div><div class="v">40.7%</div></div></div><div style="margin-top:8px"><span class="btnm" style="background:var(--panel2);border:1px solid var(--line)">Re-train model</span></div></div><div><div class="sub">Top features</div>${['atr_pct','dow_sin','volatility_72','volatility_24','atr_pct_change','ema_50_200_spread','dist_poc_pct'].map((f,i)=>`<div style="display:flex;gap:6px;align-items:center;font-size:8px;direction:ltr"><span style="width:80px;color:var(--muted);font-family:var(--mono)">${f}</span><i style="display:block;height:6px;background:var(--blue);width:${100-i*9}%;border-radius:2px"></i></div>`).join('')}</div></div>`;
+  }
+  return `<div class="dash">
+    <div class="side"><b>₿ Control panel</b><div class="lab">API URL</div><div class="inp">http://127.0.0.1:8000</div><b style="margin-top:4px">Signal</b><div class="lab">Probability threshold</div><div class="sl"><i style="width:45%"></i><b style="right:42%"></b></div><b>Risk</b><div class="lab">Account equity (USDT)</div><div class="inp">10000.00</div><div class="lab">Risk per trade (%)</div><div class="sl"><i style="width:18%"></i><b style="right:15%"></b></div><div class="lab">ATR stop multiplier</div><div class="sl"><i style="width:28%"></i><b style="right:25%"></b></div><b>Refresh</b><div class="lab">🔘 Auto-refresh · 60s</div></div>
+    <div class="main"><div class="title">BTC/USDT · 1h · ML trading signals</div>
+      <div class="kpis"><div class="kpi"><div class="l">Last price</div><div class="v">${o.price}</div><span class="c" style="background:rgba(53,201,141,.15);color:var(--long)">${o.chg} (24h)</span></div><div class="kpi"><div class="l">24h high</div><div class="v">77,506</div></div><div class="kpi"><div class="l">24h low</div><div class="v">76,967</div></div><div class="kpi"><div class="l">24h volume (BTC)</div><div class="v">9,244</div></div><div class="sig ${sigCls}"><div class="s">SIGNAL · 2026-09-12 19:00 UTC</div><div class="a">${sigTxt}</div><div class="cf">${conf}</div></div></div>
+      <div class="tabs">${tabs.map(t=>`<span class="${t===o.view?'on':''}">${names[t]}</span>`).join('')}</div>
+      <div class="body">${body}</div>
+    </div></div>${o.spot?`<div class="spot pulse" style="${o.spot}"></div>`:''}${o.tag?`<div class="tag" style="${o.tag[1]}">${o.tag[0]}</div>`:''}`;
+}
+
+/* ---------- scenes ---------- */
+const scenes=[
+ {t:'מה התוכנה עושה',d:20,cap:'התוכנה מורידה נרות מחיר של ביטקוין מבינאנס, מחשבת אינדיקטורים טכניים, מזינה אותם למודל למידת מכונה, ומתרגמת את התחזית לאיתות מסחר עם תוכנית סיכון מלאה. כל זה מוצג בממשק בדפדפן.',
+  html:`<div class="h">מה התוכנה עושה<small>חמישה שלבים, פעם בשעה, אוטומטית</small></div><div class="flow"><div class="node hot"><b>Binance</b><small>נרות שעתיים<br>BTC/USDT חיים</small></div><div class="node"><b>אינדיקטורים</b><small>RSI, EMA, ATR,<br>Bollinger, VWAP,<br>Volume Profile</small></div><div class="node"><b>מודל ML</b><small>XGBoost + LightGBM<br>הסתברות עלייה / ירידה</small></div><div class="node"><b>ניהול סיכון</b><small>Stop-Loss על ATR,<br>יעדי 1:2 ו-1:3,<br>גודל פוזיציה</small></div><div class="node"><b>הממשק</b><small>גרף, איתות,<br>תוכנית עסקה,<br>Backtest</small></div></div>`},
+ {t:'הפעלה',d:18,cap:'פותחים טרמינל בתיקיית הפרויקט ומריצים פקודה אחת. היא מעלה את מנוע החיזוי ואת הממשק. אם אין מודל מאומן, היא מאמנת אחד לבד. אחר כך פותחים בדפדפן את localhost:8501.',
+  html:`<div class="h">הפעלה<small>פקודה אחת מעלה הכל</small></div><div class="term"><div class="bar"><i></i><i></i><i></i></div><div class="ln p" style="animation-delay:.3s">C:\\Users\\LENOVO\\Desktop\\btc-ml-trader&gt; venv\\Scripts\\python.exe run.py</div><div class="ln m" style="animation-delay:1.4s">[run] no trained models found - training now...</div><div class="ln m" style="animation-delay:2.4s">Training report: 13821 train / 3452 test rows · 34.9s</div><div class="ln ok" style="animation-delay:3.6s">[run] API -> http://127.0.0.1:8000</div><div class="ln m" style="animation-delay:4.4s">INFO: Uvicorn running on http://127.0.0.1:8000</div><div class="ln ok" style="animation-delay:5.4s">[run] dashboard -> http://localhost:8501</div><div class="ln m" style="animation-delay:6.2s">  Local URL: http://localhost:8501</div><div class="ln" style="animation-delay:7s"><span class="cursor"></span></div></div><div class="tag" style="right:60px;top:300px">פותחים בדפדפן: localhost:8501</div>`},
+ {t:'המסך הראשי',d:20,cap:'למעלה: המחיר החי ונתוני 24 שעות. בצד ימין תיבת ה-SIGNAL, הדבר החשוב ביותר במסך. מתחתיה ארבע תצוגות: גרף, איתות וסיכון, בדיקה היסטורית, ומודל.',
+  html:dash({spot:'right:34px;top:68px;left:34px;height:70px',tag:['מחיר חי + תיבת האיתות','right:80px;top:20px']})},
+ {t:'שלושת מצבי האיתות',d:24,cap:'WAIT אומר שהמודל לא בטוח מספיק ואין עסקה. זה המצב רוב הזמן, בכוונה. LONG אומר שהמודל צופה עלייה בביטחון מעל הסף. SHORT אומר ירידה. רק ב-LONG או SHORT מופיעה תוכנית עסקה.',
+  html:`<div class="h">שלושת מצבי האיתות<small>הסף המוגדר הוא 55% ביטחון</small></div><div class="states"><div class="st w"><div class="a">WAIT</div><p>אף כיוון לא הגיע לסף הביטחון. לא עושים כלום ומחכים לנר הבא.</p><small>המצב הנפוץ. כ-95% מהזמן.</small></div><div class="st l"><div class="a">LONG</div><p>המודל צופה עלייה בביטחון של 55% ומעלה. מוצגת תוכנית קנייה: כניסה, Stop-Loss, שני יעדים.</p><small>Stop מתחת למחיר, יעדים מעליו.</small></div><div class="st s"><div class="a">SHORT</div><p>המודל צופה ירידה בביטחון של 55% ומעלה. מוצגת תוכנית מכירה בחסר.</p><small>Stop מעל המחיר, יעדים מתחתיו.</small></div></div>`},
+ {t:'תצוגת Chart',d:24,cap:'גרף נרות שעתי. הקו הצהוב הוא EMA 20, הכחול EMA 50, הסגול EMA 200. האזור האפור הוא רצועות בולינגר, הקו המקווקו VWAP. מימין: Volume Profile, הפס הצהוב הוא רמת המחיר עם הכי הרבה מסחר. למטה RSI.',
+  html:dash({view:'chart',spot:'right:198px;top:140px;left:52px;height:150px',tag:['EMA · Bollinger · VWAP · Volume Profile','right:250px;top:95px']})},
+ {t:'כשיש איתות: קווים על הגרף',d:16,cap:'כשיש LONG או SHORT, הגרף מצייר את מחיר הכניסה בקו לבן, את ה-Stop-Loss באדום ואת יעדי הרווח בירוק. הנקודות המקווקוות הן הטווח שהמודל צופה לארבע השעות הבאות.',
+  html:dash({view:'chart',signal:'long',spot:'right:198px;top:140px;left:52px;height:150px',tag:['כניסה · Stop (אדום) · יעדים (ירוק)','right:250px;top:95px']})},
+ {t:'תצוגת Signal & risk',d:26,cap:'משמאל: ההסתברויות של המודל לירידה, דשדוש ועלייה, לכל אחד משני המודלים ולשילוב שלהם. הקו המקווקו הוא הסף. מימין: תוכנית העסקה המלאה: מחיר כניסה, Stop-Loss, גודל פוזיציה בביטקוין, סכום הסיכון בדולרים, ושני יעדי רווח ביחס 1:2 ו-1:3.',
+  html:dash({view:'signal',signal:'long',spot:'right:200px;top:150px;left:52px;height:150px',tag:['ההסתברויות ותוכנית העסקה','right:250px;top:108px']})},
+ {t:'הפאנל השמאלי',d:24,cap:'Probability threshold: כמה ביטחון נדרש כדי לקבל איתות. נמוך יותר = יותר איתותים, פחות איכותיים. Account equity ו-Risk per trade: גודל החשבון ואחוז הסיכון לעסקה, ומהם נגזר גודל הפוזיציה. ATR stop multiplier: כמה רחוק ה-Stop. Auto-refresh מעדכן את המסך כל דקה.',
+  html:dash({spot:'right:36px;top:16px;width:150px;height:293px',tag:['הגדרות האיתות והסיכון','right:196px;top:60px']})},
+ {t:'תצוגת Backtest',d:24,cap:'כאן בודקים איך האסטרטגיה הייתה מתפקדת בעבר, רק על נתונים שהמודל לא ראה. Win rate הוא אחוז העסקאות המרוויחות, Sharpe מודד תשואה מול סיכון, Max drawdown הוא הנפילה הגדולה ביותר מהשיא. לחיצה על Run backtest מריצה סימולציה חדשה בפרמטרים שבחרתם.',
+  html:dash({view:'backtest',spot:'right:200px;top:150px;left:52px;height:150px',tag:['המספרים האמיתיים כרגע: שליליים','right:250px;top:108px']})},
+ {t:'תצוגת Model',d:18,cap:'מתי המודל אומן, על איזו תקופה נבדק, ומה הדיוק שלו על נתונים חדשים. מימין הפיצ\'רים החשובים ביותר. הכפתור Re-train model מאמן מחדש ברקע. מומלץ פעם בשבוע.',
+  html:dash({view:'model',spot:'right:200px;top:150px;width:200px;height:120px',tag:['Re-train model · פעם בשבוע','right:250px;top:108px']})},
+ {t:'שגרה יומית ותקלות',d:28,cap:'שגרה: פותחים, מסתכלים על תיבת האיתות, ואם יש LONG או SHORT עוברים לתוכנית העסקה. אם מופיעה שגיאה אדומה שהשרת לא זמין, מריצים שוב את פקודת ההפעלה. אם כתוב File change, לוחצים Rerun. ותזכורת חשובה: בבדיקות ההיסטוריות המודל לא הראה יתרון אמיתי. השתמשו בו ללמידה, לא לכסף אמיתי.',
+  html:`<div class="h">שגרה יומית ותקלות<small>מה עושים בכל יום, ומה עושים כשמשהו נשבר</small></div><div class="steps"><ol><li>פותחים localhost:8501 בדפדפן</li><li>מסתכלים על תיבת ה-SIGNAL</li><li>WAIT: לא עושים כלום</li><li>LONG / SHORT: עוברים ל-Signal & risk ורואים את תוכנית העסקה</li><li>פעם בשבוע: Re-train model</li></ol><div><div class="box"><b>שגיאה אדומה "Cannot reach API"</b><span>השרת כבוי. מריצים שוב:</span><div class="cmd">venv\\Scripts\\python.exe run.py</div><b style="margin-top:6px">"File change" למעלה</b><span>הקוד עודכן. לוחצים Rerun או Always rerun.</span><b style="margin-top:6px;color:var(--short)">אזהרה</b><span>בבדיקות ההיסטוריות המודל ברמה של הטלת מטבע. לא לסחור בכסף אמיתי לפי האיתותים.</span></div></div></div>`},
+];
+
+/* ---------- build ---------- */
+const chapters=$('#chapters');
+scenes.forEach((s,i)=>{
+  const d=document.createElement('div');d.className='scene';d.dataset.i=i;d.innerHTML=s.html;stage.appendChild(d);
+  const li=document.createElement('li');li.innerHTML=`<button><span class="n">${String(i+1).padStart(2,'0')}</span><span>${s.t}</span><span class="d">${s.d}s</span></button>`;
+  li.querySelector('button').addEventListener('click',()=>{go(i);if(!playing)togglePlay();});chapters.appendChild(li);
+});
+const total=scenes.reduce((a,s)=>a+s.d,0);
+
+/* canvases (drawn once, deterministic) */
+function rnd(seed){return()=>{seed=(seed*1664525+1013904223)%4294967296;return seed/4294967296}}
+function drawCandles(cv){
+  const W=cv.width=cv.clientWidth*2,H=cv.height=cv.clientHeight*2;const ctx=cv.getContext('2d');const r=rnd(7);
+  const n=70;let p=77400;const c=[];for(let i=0;i<n;i++){const o=p;const d=(r()-0.5)*260+(i>40&&i<50?90:i>55?-60:10);p=o+d;const h=Math.max(o,p)+r()*120,l=Math.min(o,p)-r()*120;c.push({o,cl:p,h,l})}
+  const min=Math.min(...c.map(x=>x.l)),max=Math.max(...c.map(x=>x.h));const y=v=>H*0.06+(max-v)/(max-min)*H*0.62;const x=i=>i*(W/n)+W/n/2;
+  ctx.lineWidth=2;
+  const ema=(k)=>{let e=c[0].cl;return c.map(v=>e=e+(v.cl-e)*2/(k+1))};
+  const bb=c.map((v,i)=>{const s=c.slice(Math.max(0,i-19),i+1).map(q=>q.cl);const m=s.reduce((a,b)=>a+b,0)/s.length;const sd=Math.sqrt(s.reduce((a,b)=>a+(b-m)**2,0)/s.length);return[m+2*sd,m-2*sd]});
+  ctx.fillStyle='rgba(132,148,172,.08)';ctx.beginPath();bb.forEach((b,i)=>i?ctx.lineTo(x(i),y(b[0])):ctx.moveTo(x(i),y(b[0])));for(let i=n-1;i>=0;i--)ctx.lineTo(x(i),y(bb[i][1]));ctx.closePath();ctx.fill();
+  ctx.strokeStyle='rgba(132,148,172,.5)';ctx.lineWidth=1;[0,1].forEach(k=>{ctx.beginPath();bb.forEach((b,i)=>i?ctx.lineTo(x(i),y(b[k])):ctx.moveTo(x(i),y(b[k])));ctx.stroke()});
+  c.forEach((v,i)=>{const up=v.cl>=v.o;ctx.strokeStyle=ctx.fillStyle=up?'#35C98D':'#E5615E';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(x(i),y(v.h));ctx.lineTo(x(i),y(v.l));ctx.stroke();ctx.fillRect(x(i)-W/n*0.3,y(Math.max(v.o,v.cl)),W/n*0.6,Math.max(2,Math.abs(y(v.o)-y(v.cl))))});
+  [[20,'#F5C542',2],[50,'#4EA8DE',2],[200,'#C77DFF',2.5]].forEach(([k,col,w])=>{const e=ema(k);ctx.strokeStyle=col;ctx.lineWidth=w;ctx.beginPath();e.forEach((v,i)=>i?ctx.lineTo(x(i),y(v)):ctx.moveTo(x(i),y(v)));ctx.stroke()});
+  ctx.setLineDash([4,4]);ctx.strokeStyle='#fff';ctx.lineWidth=1.2;ctx.beginPath();const vw=ema(8);vw.forEach((v,i)=>i?ctx.lineTo(x(i),y(v-40)):ctx.moveTo(x(i),y(v-40)));ctx.stroke();ctx.setLineDash([]);
+  // RSI panel
+  const r2=rnd(3);let rs=50;ctx.strokeStyle='#4EA8DE';ctx.lineWidth=2;ctx.beginPath();for(let i=0;i<n;i++){rs=Math.min(85,Math.max(20,rs+(r2()-0.5)*14));const yy=H*0.74+(100-rs)/100*H*0.24;i?ctx.lineTo(x(i),yy):ctx.moveTo(x(i),yy)}ctx.stroke();
+  ctx.setLineDash([3,4]);ctx.strokeStyle='#E5615E';ctx.beginPath();ctx.moveTo(0,H*0.74+0.3*H*0.24);ctx.lineTo(W,H*0.74+0.3*H*0.24);ctx.stroke();ctx.strokeStyle='#35C98D';ctx.beginPath();ctx.moveTo(0,H*0.74+0.7*H*0.24);ctx.lineTo(W,H*0.74+0.7*H*0.24);ctx.stroke();ctx.setLineDash([]);
+  ctx.strokeStyle='#26334A';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,H*0.71);ctx.lineTo(W,H*0.71);ctx.stroke();
+}
+function drawEquity(cv){
+  const W=cv.width=cv.clientWidth*2,H=cv.height=cv.clientHeight*2;const ctx=cv.getContext('2d');const r=rnd(11);let e=10000;const pts=[];for(let i=0;i<120;i++){e+=(r()-0.56)*140;pts.push(e)}
+  const mn=Math.min(...pts),mx=Math.max(...pts);ctx.strokeStyle='#E5615E';ctx.lineWidth=2.5;ctx.beginPath();pts.forEach((v,i)=>{const X=i/119*W,Y=H*0.08+(mx-v)/(mx-mn)*H*0.84;i?ctx.lineTo(X,Y):ctx.moveTo(X,Y)});ctx.stroke();
+  ctx.strokeStyle='#26334A';ctx.lineWidth=1;[0.25,0.5,0.75].forEach(f=>{ctx.beginPath();ctx.moveTo(0,H*f);ctx.lineTo(W,H*f);ctx.stroke()});
+}
+function drawAll(){stage.querySelectorAll('canvas.cv').forEach(cv=>{if(cv.dataset.kind==='candles')drawCandles(cv);else drawEquity(cv)})}
+requestAnimationFrame(()=>{drawAll();});
+let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(drawAll,150)});
+
+/* ---------- player ---------- */
+let cur=-1,playing=false,elapsedBefore=0,sceneStart=0,timer=null,raf=null;
+const capK=$('#capK'),capT=$('#capT'),fill=$('#fill'),timeEl=$('#time'),playBtn=$('#play');
+function fmt(s){s=Math.max(0,Math.round(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')}
+function go(i){
+  i=Math.max(0,Math.min(scenes.length-1,i));
+  stopSpeech();clearTimeout(timer);
+  cur=i;
+  stage.querySelectorAll('.scene').forEach(el=>el.classList.toggle('on',+el.dataset.i===i));
+  // restart terminal animations
+  const sc=stage.querySelector('.scene.on');sc.querySelectorAll('.ln').forEach(el=>{el.style.animation='none';void el.offsetWidth;el.style.animation=''});
+  chapters.querySelectorAll('li').forEach((li,j)=>li.classList.toggle('cur',j===i));
+  capK.textContent=`פרק ${i+1} / ${scenes.length} · ${scenes[i].t}`;capT.textContent=scenes[i].cap;
+  elapsedBefore=scenes.slice(0,i).reduce((a,s)=>a+s.d,0);sceneStart=performance.now();
+  if(playing)startScene();else tick();
+}
+function startScene(){
+  const s=scenes[cur];let done=false;const finish=()=>{if(done)return;done=true;if(cur<scenes.length-1)go(cur+1);else{togglePlay();go(0);}};
+  const spoke=speak(s.cap,finish);
+  timer=setTimeout(()=>{if(!spoke)finish();},s.d*1000);
+  if(spoke){/* safety net if TTS never fires onend */timer=setTimeout(finish,Math.max(s.d,s.cap.length/9)*1000+8000)}
+}
+function tick(){
+  const el=playing?(performance.now()-sceneStart)/1000:0;const t=Math.min(total,elapsedBefore+Math.min(el,scenes[cur].d));
+  fill.style.width=(t/total*100)+'%';timeEl.textContent=fmt(t)+' / '+fmt(total);
+  if(playing)raf=requestAnimationFrame(tick);
+}
+function togglePlay(){
+  playing=!playing;playBtn.innerHTML=playing?'⏸ השהה':'▶ נגן';playBtn.setAttribute('aria-label',playing?'השהה':'נגן');
+  if(playing){sceneStart=performance.now();startScene();tick();}else{stopSpeech();clearTimeout(timer);cancelAnimationFrame(raf);}
+}
+playBtn.addEventListener('click',togglePlay);
+$('#prev').addEventListener('click',()=>go(cur-1));
+$('#next').addEventListener('click',()=>go(cur+1));
+$('#prog').addEventListener('click',e=>{const r=e.currentTarget.getBoundingClientRect();const f=(r.right-e.clientX)/r.width;let acc=0;for(let i=0;i<scenes.length;i++){acc+=scenes[i].d;if(f*total<acc){go(i);break}}});
+document.addEventListener('keydown',e=>{if(e.target.tagName==='SELECT')return;if(e.code==='Space'){e.preventDefault();togglePlay()}if(e.key==='ArrowLeft')go(cur+1);if(e.key==='ArrowRight')go(cur-1)});
+
+/* ---------- narration (browser TTS) ---------- */
+let voiceOn=true,voice=null;const voiceBtn=$('#voice'),voiceSel=$('#voices'),voiceNote=$('#voiceNote');
+const synth=window.speechSynthesis;
+function loadVoices(){
+  if(!synth){voiceSel.innerHTML='<option>לא נתמך</option>';voiceNote.textContent='הדפדפן לא תומך בקריינות. הכתוביות מספיקות.';return}
+  const vs=synth.getVoices();if(!vs.length)return;
+  const he=vs.filter(v=>/^he/i.test(v.lang));const list=he.length?he:vs;
+  voiceSel.innerHTML=list.map((v,i)=>`<option value="${vs.indexOf(v)}">${v.name} (${v.lang})</option>`).join('');
+  voice=list[0];voiceSel.value=vs.indexOf(voice);
+  voiceNote.textContent=he.length?'':'לא נמצא קול עברי במחשב; הקריינות תישמע במבטא זר. אפשר להתקין קול עברי בהגדרות Windows > שפה > עברית > דיבור.';
+}
+if(synth){loadVoices();synth.onvoiceschanged=loadVoices;}
+voiceSel.addEventListener('change',()=>{voice=synth.getVoices()[+voiceSel.value]||voice});
+voiceBtn.addEventListener('click',()=>{voiceOn=!voiceOn;voiceBtn.setAttribute('aria-pressed',voiceOn);voiceBtn.textContent=voiceOn?'🔊 קריינות':'🔇 קריינות';if(!voiceOn)stopSpeech();});
+function speak(text,onend){
+  if(!voiceOn||!synth||!voice)return false;
+  try{synth.cancel();const u=new SpeechSynthesisUtterance(text);u.voice=voice;u.lang=voice.lang;u.rate=1;u.onend=onend;u.onerror=onend;synth.speak(u);return true}catch(e){return false}
+}
+function stopSpeech(){try{synth&&synth.cancel()}catch(e){}}
+
+go(0);
+})();
+</script>
+
+</body>
+</html>

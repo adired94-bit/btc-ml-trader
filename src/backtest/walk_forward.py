@@ -98,7 +98,7 @@ class WalkForwardConfig:
     reg_params: dict[str, Any] = field(default_factory=lambda: dict(WF_REG_PARAMS))
     regime_weights: dict[str, float] = field(default_factory=dict)  # extra sample weight per regime flag
     skip_regimes: list[str] = field(default_factory=list)  # ex-ante regimes in which no trade is taken
-    feature_set: str = "base"  # "base" (36 features) or "extended" (+ multi-day context)
+    feature_set: str = "base"  # "base" (36 features), "extended" (+ multi-day context) or "flow" (+ order flow / derivatives)
     model: str = "ensemble"  # "ensemble" (XGB+LGBM) or "logreg" (regularised logistic regression)
     logreg_c: float = 0.05
     label: str = "baseline"
@@ -214,9 +214,23 @@ def risk_level_from_rank(rank: float) -> str:
     return "MEDIUM"
 
 
-def prepare_data(ohlcv: pd.DataFrame, horizon_bars: int = BARS_PER_DAY, feature_set: str = "base") -> PreparedData:
+def prepare_data(
+    ohlcv: pd.DataFrame, horizon_bars: int = BARS_PER_DAY, feature_set: str = "base", alt: pd.DataFrame | None = None
+) -> PreparedData:
     indicators = add_all_indicators(ohlcv)
-    features = build_extended_features(ohlcv, indicators) if feature_set == "extended" else build_features(ohlcv, indicators)
+    if feature_set == "flow":
+        from src.data.altdata import build_flow_features, load_alt_data
+
+        alt = alt if alt is not None else load_alt_data()
+        if alt is None:
+            raise ValueError("feature_set='flow' needs data/*_alt.csv - run `python -m src.data.altdata` first")
+        features = build_flow_features(ohlcv, indicators, alt)
+    elif feature_set == "extended":
+        features = build_extended_features(ohlcv, indicators)
+    elif feature_set == "base":
+        features = build_features(ohlcv, indicators)
+    else:
+        raise ValueError(f"Unknown feature_set: {feature_set}")
     close = ohlcv["close"]
     future_return = close.shift(-horizon_bars) / close - 1.0
     direction = pd.Series(np.where(future_return >= 0, UP, DOWN), index=ohlcv.index)
