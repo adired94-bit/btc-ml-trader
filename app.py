@@ -22,6 +22,31 @@ from config import settings
 
 st.set_page_config(page_title="BTC/USDT ML Signals", page_icon="₿", layout="wide")
 
+
+
+# ----------------------------------------------------------------------
+# Transport: HTTP to the FastAPI server when reachable, otherwise in-process
+# (single-process deployments such as Streamlit Community Cloud).
+# ----------------------------------------------------------------------
+
+
+@st.cache_resource(show_spinner=False)
+def _embedded_client():
+    from src.api.embedded import get_client
+
+    return get_client()
+
+
+def _http_alive(base: str) -> bool:
+    try:
+        return requests.get(f"{base}/health", timeout=3).status_code == 200
+    except requests.RequestException:
+        return False
+
+
+def _detail(exc: Exception) -> str:
+    return getattr(exc, "detail", None) or str(exc)
+
 ACTION_COLORS = {"LONG": "#35C98D", "SHORT": "#E5615E", "WAIT": "#E8A33D"}
 
 
@@ -31,6 +56,13 @@ ACTION_COLORS = {"LONG": "#35C98D", "SHORT": "#E5615E", "WAIT": "#E8A33D"}
 
 
 def api_get(base: str, path: str, params: dict[str, Any] | None = None, timeout: int = 30, silent: bool = False) -> dict[str, Any] | None:
+    if base == "embedded":
+        try:
+            return _embedded_client().get(path, params)
+        except Exception as exc:  # noqa: BLE001 - surfaced to the user like an HTTP error
+            if not silent:
+                st.warning(f"{path}: {_detail(exc)}")
+            return None
     try:
         resp = requests.get(f"{base}{path}", params=params, timeout=timeout)
         if resp.status_code >= 400:
@@ -45,6 +77,12 @@ def api_get(base: str, path: str, params: dict[str, Any] | None = None, timeout:
 
 
 def api_post(base: str, path: str, payload: dict[str, Any], timeout: int = 30) -> dict[str, Any] | None:
+    if base == "embedded":
+        try:
+            return _embedded_client().post(path, payload)
+        except Exception as exc:  # noqa: BLE001
+            st.warning(f"{path}: {_detail(exc)}")
+            return None
     try:
         resp = requests.post(f"{base}{path}", json=payload, timeout=timeout)
         if resp.status_code >= 400:
@@ -63,7 +101,11 @@ def api_post(base: str, path: str, payload: dict[str, Any], timeout: int = 30) -
 
 with st.sidebar:
     st.title("₿ Control panel")
-    api_base = st.text_input("API URL", value=settings.api_url).rstrip("/")
+    if "api_base" not in st.session_state:
+        st.session_state["api_base"] = settings.api_url if _http_alive(settings.api_url) else "embedded"
+    api_base = st.text_input("API URL (or 'embedded')", key="api_base").rstrip("/")
+    if api_base == "embedded":
+        st.caption("Running in-process: no separate API server needed.")
     st.subheader("Signal")
     threshold = st.slider("Probability threshold", 0.34, 0.90, float(settings.signal_probability_threshold), 0.01)
     st.subheader("Risk")
@@ -78,12 +120,13 @@ with st.sidebar:
     if st.button("Refresh now"):
         st.rerun()
 
-health = api_get(api_base, "/health", timeout=10)
+health = api_get(api_base, "/health", timeout=10, silent=True)
+if health is None and api_base != "embedded":
+    st.session_state["api_base"] = "embedded"
+    api_base = "embedded"
+    health = api_get(api_base, "/health", timeout=10)
 if health is None:
-    st.error(
-        "The FastAPI backend is not reachable. Start it with "
-        "`uvicorn src.api.main:app --host 127.0.0.1 --port 8000` and reload."
-    )
+    st.error("Neither the API server nor the in-process engine could start. Check the logs.")
     st.stop()
 
 # ----------------------------------------------------------------------
