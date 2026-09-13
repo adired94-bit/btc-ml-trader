@@ -64,6 +64,12 @@ venv\Scripts\python.exe -m src.backtest.walk_forward          # daily walk-forwa
 
 Results and learnings accumulate in `SYSTEM_LEARNINGS.md`; raw JSON lands in `models/`.
 
+## Cloud / work from any device
+
+See [DEPLOY.md](DEPLOY.md). Short version: push to GitHub (`publish.ps1`), then deploy `app.py` on
+Streamlit Community Cloud. The dashboard runs in *embedded* mode there (no separate API process);
+models and two years of data ship in the repo so the app starts trained.
+
 ## Disclaimer
 
 Research software. Backtested performance is not indicative of future results; nothing here is
