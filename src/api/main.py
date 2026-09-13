@@ -318,6 +318,23 @@ def risk_plan(req: RiskPlanRequest) -> dict[str, Any]:
 
 
 # ----------------------------------------------------------------------
+# Routes: swing snapshot (BTC / MSTR)
+# ----------------------------------------------------------------------
+
+
+@app.get("/swing/{asset}")
+def swing_snapshot(asset: str, history_days: int = Query(default=365, ge=30, le=2000)) -> dict[str, Any]:
+    from src.services.swing import build_snapshot
+
+    try:
+        return build_snapshot(asset.upper(), history_days=history_days).to_dict()
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=502, detail=f"Swing data unavailable: {exc}") from exc
+
+
+# ----------------------------------------------------------------------
 # Routes: model management
 # ----------------------------------------------------------------------
 

@@ -46,6 +46,8 @@ class EmbeddedClient:
                 )
             if path == "/model/info":
                 return api.model_info()
+            if path.startswith("/swing/"):
+                return api.swing_snapshot(path.split("/")[-1], history_days=int(p.get("history_days", 365)))
             if path == "/backtest/result":
                 return api.backtest_result(key=str(p.get("key", "")))
             if path == "/backtest/latest":

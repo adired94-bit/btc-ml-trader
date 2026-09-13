@@ -172,9 +172,78 @@ with c5:
 # Tabs
 # ----------------------------------------------------------------------
 
-VIEWS = ["📈 Chart", "🎯 Signal & risk", "🧪 Backtest", "🧠 Model"]
+VIEWS = ["🧭 Swing", "📈 Chart", "🎯 Signal & risk", "🧪 Backtest", "🧠 Model"]
 # A radio persisted in session_state keeps the selected view across auto-refresh reruns (st.tabs resets).
 view = st.radio("View", VIEWS, horizontal=True, label_visibility="collapsed", key="view")
+
+if view == "🧭 Swing":
+    st.subheader("מצב שוק לסווינג: BTC ו-MSTR")
+    st.caption("לא איתות קנייה/מכירה. תשובה לשאלות של מי שמחזיק שבועות: איפה אנחנו במחזור, כמה מסוכן השבוע והחודש הקרובים, אילו רמות חשובות, וכמה פוזיציה מתאימה לסיכון שאתה מוכן לספוג.")
+    sz1, sz2 = st.columns(2)
+    portfolio = sz1.number_input("גודל התיק (USD)", min_value=100.0, value=10_000.0, step=500.0, key="swing_portfolio")
+    max_loss = sz2.slider("הפסד חודשי מקסימלי שאתה מוכן לספוג (% מהתיק)", 1.0, 30.0, 10.0, 0.5, key="swing_max_loss")
+    REGIME_HE = {"BULL": ("שורי", "#35C98D"), "BEAR": ("דובי", "#E5615E"), "NEUTRAL": ("ניטרלי / מעורב", "#E8A33D")}
+    TREND_HE = {"UP": "עולה", "DOWN": "יורדת", "MIXED": "מעורבת"}
+    cols = st.columns(2)
+    for col, asset in zip(cols, ("BTC", "MSTR")):
+        with col:
+            with st.spinner(f"טוען {asset}..."):
+                snap = api_get(api_base, f"/swing/{asset}", {"history_days": 365}, timeout=120)
+            if not snap:
+                st.warning(f"אין נתונים ל-{asset} כרגע.")
+                continue
+            reg = snap["regime"]
+            label, colour = REGIME_HE[reg["label"]]
+            st.markdown(
+                f"<div style='border:2px solid {colour};border-radius:12px;padding:12px 16px'>"
+                f"<div style='font-size:13px;color:#8494AC'>{asset} · {snap['symbol']} · נכון ל-{snap['as_of']}</div>"
+                f"<div style='font-size:34px;font-weight:800'>{snap['price']:,.2f} <span style='font-size:16px;color:{'#35C98D' if snap['changes_pct']['1d'] >= 0 else '#E5615E'}'>{snap['changes_pct']['1d']:+.2f}% היום</span></div>"
+                f"<div style='font-size:22px;font-weight:800;color:{colour};margin-top:4px'>משטר: {label} <span style='font-size:13px;color:#8494AC'>(ציון {reg['score']:+d} מתוך ±{reg['max_score']})</span></div>"
+                "</div>", unsafe_allow_html=True)
+            for r in reg["reasons"]:
+                st.markdown(f"• {r}")
+            ch = snap["changes_pct"]
+            m1, m2, m3, m4 = st.columns(4)
+            m1.metric("שבוע", f"{ch['1w']:+.1f}%")
+            m2.metric("חודש", f"{ch['1m']:+.1f}%")
+            m3.metric("3 חודשים", f"{ch['3m']:+.1f}%")
+            m4.metric("שנה", f"{ch['1y']:+.1f}%")
+            risk = snap["risk"]
+            st.markdown("**סיכון (מהתנודתיות של 21 הימים האחרונים)**")
+            r1, r2, r3 = st.columns(3)
+            r1.metric("תזוזה צפויה לשבוע (±1σ)", f"±{risk['expected_move_1w_pct']:.1f}%")
+            r2.metric("תזוזה צפויה לחודש (±1σ)", f"±{risk['expected_move_1m_pct']:.1f}%")
+            r3.metric("תנודתיות שנתית", f"{risk['vol_21d_annualised_pct']:.0f}%", f"אחוזון {risk['vol_percentile_1y']:.0f} בשנה")
+            st.caption(f"טווח סביר לחודש: {risk['range_1m'][0]:,.0f} – {risk['range_1m'][1]:,.0f} · במקרה קיצון (2σ): {risk['range_1m_2sigma'][0]:,.0f} – {risk['range_1m_2sigma'][1]:,.0f} · ירידה מהשיא: {risk['drawdown_from_ath_pct']:.1f}% · הנפילה הגדולה בשנה: {risk['max_drawdown_1y_pct']:.1f}%"
+                       + (f" · בטא לביטקוין {risk['beta_to_btc_63d']:.2f}" if "beta_to_btc_63d" in risk else ""))
+            two_sigma = 2 * risk["expected_move_1m_pct"]
+            frac = min(1.0, max_loss / two_sigma) if two_sigma > 0 else 1.0
+            st.markdown("**גודל פוזיציה מתאים**")
+            st.info(f"כדי שירידה חודשית קיצונית (2σ = {two_sigma:.0f}%) תפסיד לכל היותר {max_loss:.0f}% מהתיק: עד **{frac * 100:.0f}% מהתיק** = **{portfolio * frac:,.0f} USD** ב-{asset}.")
+            lv = snap["levels"]
+            st.markdown("**רמות מחיר**")
+            st.dataframe(pd.DataFrame({
+                "רמה": ["שיא כל הזמנים", "שיא 52 שבועות", "שיא 20 יום", "ממוצע 50 יום", "ממוצע 200 יום", "מחיר הכי נסחר (120 יום)", "שפל 20 יום", "שפל 52 שבועות"],
+                "מחיר": [lv["all_time_high"], lv["high_52w"], lv["high_20d"], lv["ema50"], lv["ema200"], lv["poc_120d"], lv["low_20d"], lv["low_52w"]],
+                "מרחק": [f"{(snap['price'] / v - 1) * 100:+.1f}%" for v in (lv["all_time_high"], lv["high_52w"], lv["high_20d"], lv["ema50"], lv["ema200"], lv["poc_120d"], lv["low_20d"], lv["low_52w"])],
+            }).style.format({"מחיר": "{:,.2f}"}), hide_index=True, width="stretch")
+            hist = pd.DataFrame(snap["history"])
+            hist["date"] = pd.to_datetime(hist["date"])
+            rows_n = 2 if asset == "BTC" and "cm_mvrv" in hist else 1
+            figs = make_subplots(rows=rows_n, cols=1, shared_xaxes=True, row_heights=[0.7, 0.3] if rows_n == 2 else [1.0], vertical_spacing=0.04)
+            figs.add_trace(go.Candlestick(x=hist["date"], open=hist["open"], high=hist["high"], low=hist["low"], close=hist["close"], name=asset,
+                                          increasing_line_color="#35C98D", decreasing_line_color="#E5615E"), row=1, col=1)
+            figs.add_trace(go.Scatter(x=hist["date"], y=hist["ema50"], name="EMA 50", line=dict(color="#4EA8DE", width=1.2)), row=1, col=1)
+            figs.add_trace(go.Scatter(x=hist["date"], y=hist["ema200"], name="EMA 200", line=dict(color="#C77DFF", width=1.6)), row=1, col=1)
+            figs.add_hline(y=lv["high_52w"], line=dict(color="rgba(245,197,66,.5)", dash="dot"), row=1, col=1)
+            figs.add_hline(y=lv["low_52w"], line=dict(color="rgba(245,197,66,.5)", dash="dot"), row=1, col=1)
+            if rows_n == 2:
+                figs.add_trace(go.Scatter(x=hist["date"], y=hist["cm_mvrv"], name="MVRV", line=dict(color="#F5C542")), row=2, col=1)
+                figs.add_hline(y=1.0, line=dict(color="#35C98D", dash="dot", width=1), row=2, col=1)
+                figs.add_hline(y=3.0, line=dict(color="#E5615E", dash="dot", width=1), row=2, col=1)
+            figs.update_layout(height=520 if rows_n == 2 else 400, template="plotly_dark", xaxis_rangeslider_visible=False, showlegend=False, margin=dict(l=10, r=10, t=10, b=10))
+            st.plotly_chart(figs, width="stretch")
+    st.caption("מקורות: Yahoo Finance (מחירים יומיים), Coin Metrics (MVRV, סטייבלקוינים), Alternative.me (פחד/חמדנות). המדדים מתעדכנים פעם ביום. זה כלי מצב וסיכון, לא תחזית כיוון: בבדיקות על 6 שנים, חיזוי כיוון לא ניצח החזקה פשוטה.")
 
 if view == "📈 Chart":
     ind = api_get(api_base, "/indicators", {"limit": n_candles})

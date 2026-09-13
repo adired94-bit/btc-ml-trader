@@ -13,3 +13,4 @@ logs/*.err
 .claude/worktrees/
 data/ETH_USDT_1h.csv
 data/SOL_USDT_1h.csv
+!data/BTC_onchain_daily.csv
