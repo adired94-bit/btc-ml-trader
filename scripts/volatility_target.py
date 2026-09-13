@@ -98,7 +98,7 @@ def simulate_breakout(bars: pd.DataFrame, close: float, atr: float, equity: floa
         return 0.0, 0.0, "NONE", "NO_BREAKOUT"
     dist = k * atr
     stop = entry - dist if side == "LONG" else entry + dist
-    tp = entry + rr * dist if side == "LONG" else entry - rr * dist
+    tp = (entry + rr * dist if side == "LONG" else entry - rr * dist) if rr > 0 else (float("inf") if side == "LONG" else 0.0)
     size = equity * risk_pct / dist
     exit_price, reason = None, "CLOSE"
     for _, b in bars.iloc[i0:].iterrows():
@@ -121,8 +121,10 @@ def simulate_breakout(bars: pd.DataFrame, close: float, atr: float, equity: floa
 
 
 def run(ohlcv: pd.DataFrame, start_days_ago: int, end_days_ago: int, retrain_every: int, p_threshold: float,
-        k: float, rr: float, trade_all_days: bool = False, verbose: bool = True) -> tuple[list[DayRow], dict]:
-    feats, label, fut_abs, thr, datr = prepare(ohlcv)
+        k: float, rr: float, trade_all_days: bool = False, verbose: bool = True,
+        prepared=None, predictions: dict | None = None, collect: dict | None = None) -> tuple[list[DayRow], dict]:
+    """``predictions`` (day -> p_big) skips model training; ``collect`` receives the p_big of every day."""
+    feats, label, fut_abs, thr, datr = prepared if prepared is not None else prepare(ohlcv)
     cfg = WalkForwardConfig(eval_start_days_ago=start_days_ago, eval_end_days_ago=end_days_ago)
     start, end = evaluation_days(ohlcv.index, cfg)
     closes = day_close_bars(ohlcv.index)
@@ -137,7 +139,11 @@ def run(ohlcv: pd.DataFrame, start_days_ago: int, end_days_ago: int, retrain_eve
         if i + BARS_PER_DAY >= len(ohlcv):
             break
         train_end = ohlcv.index[i - BARS_PER_DAY]
-        if model is None or (day - last_train).days >= retrain_every:
+        if predictions is not None:
+            if day.isoformat() not in predictions or not np.isfinite(datr.iloc[i]):
+                continue
+            p_big = predictions[day.isoformat()]
+        elif model is None or (day - last_train).days >= retrain_every:
             mask = (feats.index <= train_end) & (label >= 0).to_numpy()
             X = feats[mask].dropna()
             y = label.loc[X.index]
@@ -146,10 +152,13 @@ def run(ohlcv: pd.DataFrame, start_days_ago: int, end_days_ago: int, retrain_eve
             last_train = day
             if verbose:
                 logger.info("Retrained at %s on %d rows (big-day share %.2f)", day.date(), len(X), y.mean())
-        row = feats.iloc[[i]][cols]
-        if row.isna().any(axis=None) or not np.isfinite(datr.iloc[i]):
-            continue
-        p_big = float(model.predict_proba(row.to_numpy(dtype=np.float32))[0][1])
+        if predictions is None:
+            row = feats.iloc[[i]][cols]
+            if row.isna().any(axis=None) or not np.isfinite(datr.iloc[i]):
+                continue
+            p_big = float(model.predict_proba(row.to_numpy(dtype=np.float32))[0][1])
+        if collect is not None:
+            collect[day.isoformat()] = p_big
         actual_big = bool(fut_abs.iloc[i] > thr.iloc[i])
         predicted_big = p_big >= p_threshold
         traded = trade_all_days or predicted_big
@@ -184,6 +193,58 @@ def run(ohlcv: pd.DataFrame, start_days_ago: int, end_days_ago: int, retrain_eve
     return rows, metrics
 
 
+def run_grid(ohlcv: pd.DataFrame, start: int, mid: int, end: int, args) -> None:
+    """Execution sweep on fixed out-of-sample volatility predictions."""
+    import itertools
+
+    t0 = time.perf_counter()
+    prepared = prepare(ohlcv)
+    preds_tune: dict = {}
+    preds_val: dict = {}
+    run(ohlcv, start, mid, args.retrain_every, 0.0, 0.5, 2.0, verbose=False, prepared=prepared, collect=preds_tune)
+    run(ohlcv, mid, end, args.retrain_every, 0.0, 0.5, 2.0, verbose=False, prepared=prepared, collect=preds_val)
+    print(f"predictions ready: tune {len(preds_tune)} days, val {len(preds_val)} days ({time.perf_counter() - t0:.0f}s)", flush=True)
+    grid = list(itertools.product([0.5, 0.55, 0.6, 0.65, 0.7], [0.5, 0.75, 1.0, 1.5], [0.0, 1.0, 1.5, 2.0, 3.0]))
+    keys = ("trades", "win_rate", "total_return_pct", "sharpe", "max_drawdown_pct", "precision_big")
+    rows = []
+    for thr, k, rr in grid:
+        _, m = run(ohlcv, start, mid, args.retrain_every, thr, k, rr, verbose=False, prepared=prepared, predictions=preds_tune)
+        rows.append({"thr": thr, "k": k, "rr": rr, "half": "tune", **{kk: m[kk] for kk in keys}})
+    tune_df = pd.DataFrame(rows)
+    ranked = tune_df.sort_values("sharpe", ascending=False)
+    print("\nTop 10 on tune half:\n" + ranked.head(10).to_string(index=False), flush=True)
+    val_rows = []
+    for _, r in ranked.head(5).iterrows():
+        _, m = run(ohlcv, mid, end, args.retrain_every, r["thr"], r["k"], r["rr"], verbose=False, prepared=prepared, predictions=preds_val)
+        val_rows.append({"thr": r["thr"], "k": r["k"], "rr": r["rr"], "half": "validation", **{kk: m[kk] for kk in keys}})
+    val_df = pd.DataFrame(val_rows)
+    print("\nTop-5 tune configs on validation half:\n" + val_df.to_string(index=False), flush=True)
+    all_val = []
+    for thr, k, rr in grid:
+        _, m = run(ohlcv, mid, end, args.retrain_every, thr, k, rr, verbose=False, prepared=prepared, predictions=preds_val)
+        all_val.append({"thr": thr, "k": k, "rr": rr, "sharpe": m["sharpe"], "total_return_pct": m["total_return_pct"], "trades": m["trades"]})
+    all_val_df = pd.DataFrame(all_val)
+    share_pos = float((all_val_df["total_return_pct"] > 0).mean())
+    print(f"\nValidation grid: {share_pos:.0%} of {len(grid)} configs profitable; median return {all_val_df['total_return_pct'].median():+.2f}%", flush=True)
+
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    lines = [f"\n## {now} — Breakout execution sweep on fixed volatility predictions (6-year data)\n",
+             f"Model trained once per half (retrain every {args.retrain_every} d); {len(grid)} execution configs (threshold x breakout k x R:R, rr=0 = hold to close) scored on the tune half, top-5 re-scored on validation.\n",
+             "| Rank | Thr | k (ATR) | R:R | Tune trades / win / return / Sharpe / DD | Validation trades / win / return / Sharpe / DD |\n|---|---|---|---|---|---|"]
+    for rank, (_, r) in enumerate(ranked.head(5).iterrows(), 1):
+        v = val_df.iloc[rank - 1]
+        lines.append(f"| {rank} | {r['thr']:.2f} | {r['k']:.2f} | {r['rr']:.1f} | {int(r['trades'])} / {r['win_rate']:.0%} / {r['total_return_pct']:+.1f}% / {r['sharpe']:.2f} / {r['max_drawdown_pct']:.1f}% | {int(v['trades'])} / {v['win_rate']:.0%} / {v['total_return_pct']:+.1f}% / {v['sharpe']:.2f} / {v['max_drawdown_pct']:.1f}% |")
+    lines.append(f"\n* Validation grid overall: {share_pos:.0%} of configs profitable, median return {all_val_df['total_return_pct'].median():+.2f}%; best possible on validation (hindsight) Sharpe {all_val_df['sharpe'].max():.2f}.")
+    lines.append(f"* Runtime {time.perf_counter() - t0:.0f}s.\n")
+    text = "\n".join(lines)
+    print(text)
+    if not args.no_append:
+        append_learnings(text)
+    out = settings.models_dir / "volatility_execution_grid.json"
+    out.write_text(json.dumps({"tune": rows, "validation_top5": val_rows, "validation_all": all_val, "share_profitable_val": share_pos}, indent=2, default=str), encoding="utf-8")
+    print(f"saved {out}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--long", action="store_true")
@@ -191,6 +252,7 @@ def main() -> None:
     parser.add_argument("--k", type=float, default=0.5, help="breakout distance in daily ATR")
     parser.add_argument("--rr", type=float, default=2.0)
     parser.add_argument("--no-append", action="store_true")
+    parser.add_argument("--grid", action="store_true", help="train once per half, then sweep threshold x k x rr on the fixed predictions")
     args = parser.parse_args()
     t0 = time.perf_counter()
     if args.long:
@@ -204,6 +266,9 @@ def main() -> None:
     mid = end + span // 2
 
     results = {}
+    if args.grid:
+        run_grid(ohlcv, start, mid, end, args)
+        return
     # Tune the probability threshold on the older half only, validate on the newer half.
     for thr in (0.5, 0.55, 0.6, 0.65):
         _, m = run(ohlcv, start, mid, args.retrain_every, thr, args.k, args.rr, verbose=False)

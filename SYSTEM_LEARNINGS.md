@@ -424,3 +424,20 @@ validation 47.1 % / 44.2 % (86) / −4.1 %. Momentum-30d benchmark 50.4 % / 55.1
 (`scripts/volatility_target.py`, AUC 0.63 on a smoke window), non-crypto macro context (SPX, DXY,
 gold; the only cross-asset variant with a causal story), and paid/alt data (on-chain, exchange
 flows). Direction-only work on OHLCV is closed.
+
+## 2026-09-13 07:33 UTC — Volatility target + breakout strategy (6-year data, k=0.5 ATR, R:R 2.0)
+
+Predict whether the next 24 h |return| exceeds the trailing 90-day median ("big day"); trade an OCO breakout only on predicted big days.
+
+| Split | Threshold | Big-day acc. | AUC | Naive (persistence) | Precision | Trades | Win rate | Return | Sharpe | Max DD |
+|---|---|---|---|---|---|---|---|---|---|---|
+| tune | 0.50 | 59.9% | 0.605 | 48.8% | 59.9% | 250 | 38.8% | -22.46% | -1.27 | 29.7% |
+| tune | 0.55 | 57.7% | 0.605 | 48.8% | 60.9% | 192 | 38.0% | -20.94% | -1.35 | 29.1% |
+| tune | 0.60 | 53.4% | 0.605 | 48.8% | 60.0% | 120 | 34.2% | -20.71% | -1.70 | 24.7% |
+| tune | 0.65 | 51.6% | 0.605 | 48.8% | 62.3% | 68 | 36.8% | -8.80% | -0.81 | 14.6% |
+| tune | every day | – | – | – | – | 355 | 38.9% | -26.48% | -1.33 | 34.3% |
+| **validation** | 0.65 | 53.4% | 0.571 | 52.6% | 67.9% | 47 | 42.6% | +7.30% | 0.77 | 6.3% |
+| validation | every day | – | – | – | – | 340 | 38.5% | -26.76% | -1.42 | 29.5% |
+
+* Big-day share 50.6%; exits on validation {'CLOSE': 19, 'STOP': 16, 'TAKE_PROFIT': 12}, days with no breakout 9.
+* Runtime 258s.
