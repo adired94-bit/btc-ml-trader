@@ -59,6 +59,8 @@ class EmbeddedClient:
             req = api.TrainRequest(**payload)
             if api.training.running:
                 raise HTTPException(status_code=409, detail="A training job is already running")
+            # Flag before the thread starts so a rerun that arrives first sees "running", not "unknown".
+            api.training.running = True
             threading.Thread(target=api._train_job, args=(req.tune, req.n_iter), daemon=True).start()
             return {"status": "started", "tune": req.tune, "n_iter": req.n_iter}
         if path == "/backtest/run":
@@ -69,6 +71,7 @@ class EmbeddedClient:
                 return {"status": "ready", "key": key, "result": cached}
             if api.backtests.running:
                 raise HTTPException(status_code=409, detail="A backtest is already running")
+            api.backtests.running = True
             threading.Thread(target=api._backtest_job, args=(req, key), daemon=True).start()
             return {"status": "started", "key": key}
         raise HTTPException(status_code=404, detail=f"Unknown path {path}")

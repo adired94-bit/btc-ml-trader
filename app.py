@@ -321,7 +321,9 @@ if view == "🧪 Backtest":
         if result:
             m = result["metrics"]
             st.caption(f"{result['mode']} · {result['start'][:10]} → {result['end'][:10]} · {result['bars']} bars · {len(result.get('folds', []))} fold(s)")
-            g1, g2, g3, g4, g5, g6 = st.columns(6)
+            # Two rows of three: six metrics side by side get ellipsised inside the 3/4-width panel.
+            g1, g2, g3 = st.columns(3)
+            g4, g5, g6 = st.columns(3)
             g1.metric("Trades", m["total_trades"])
             g2.metric("Win rate", f"{m['win_rate']:.1%}")
             g3.metric("Sharpe", f"{m['sharpe_ratio']:.2f}")
@@ -372,7 +374,11 @@ if view == "🧠 Model":
                 fi.update_layout(template="plotly_dark", height=420, margin=dict(l=10, r=10, t=20, b=10))
                 st.plotly_chart(fi, width="stretch")
 
-st.caption(f"API {api_base} · cache age {health.get('market_cache_age_s')}s · exchange {health.get('exchange')} · v{health.get('version')}")
+cache_age = health.get("market_cache_age_s")  # None until the in-process market cache is first warmed
+st.caption(
+    f"API {api_base} · cache age {'n/a' if cache_age is None else f'{cache_age}s'} · "
+    f"exchange {health.get('exchange')} · v{health.get('version')}"
+)
 
 if auto_refresh:
     time.sleep(refresh_seconds)
